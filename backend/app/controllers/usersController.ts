@@ -1,8 +1,6 @@
 import type { HttpContext } from '@adonisjs/core/http'
 import User from '#models/users'
 
-
-
 export default class usersController {
   // GET /users
   public async index({ response }: HttpContext) {

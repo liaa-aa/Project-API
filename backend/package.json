@@ -41,6 +41,7 @@
     "@japa/plugin-adonisjs": "^4.0.0",
     "@japa/runner": "^4.2.0",
     "@swc/core": "1.11.24",
+    "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^22.15.18",
     "eslint": "^9.26.0",
     "hot-hook": "^0.4.0",
@@ -50,11 +51,14 @@
     "typescript": "~5.8"
   },
   "dependencies": {
-    "@adonisjs/auth": "^9.4.0",
+    "@adonisjs/auth": "^9.5.1",
     "@adonisjs/core": "^6.18.0",
     "@adonisjs/cors": "^2.2.1",
     "@adonisjs/lucid": "^21.6.1",
+    "@types/bcryptjs": "^2.4.6",
     "@vinejs/vine": "^3.0.1",
+    "bcryptjs": "^3.0.3",
+    "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.0.0",
     "reflect-metadata": "^0.2.2"
   },
