@@ -24,7 +24,4 @@ export default class GraphqlController {
 
     return response.send(result)
   }
-  public async index({ response }: HttpContext) {
-    return response.send('GraphQL Endpoint is working')
-  }
 }

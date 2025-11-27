@@ -62,6 +62,7 @@ export default class AuthController {
           id: user._id,
           email: user.email,
           name: user.name,
+          role: user.role,
         },
         env.get('JWT_SECRET') || '',
         { expiresIn: '24h' }
@@ -74,6 +75,7 @@ export default class AuthController {
           id: user._id,
           name: user.name,
           email: user.email,
+          role: user.role,
         },
       })
     } catch (error) {

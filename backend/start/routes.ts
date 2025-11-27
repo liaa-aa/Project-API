@@ -10,7 +10,7 @@
 import router from '@adonisjs/core/services/router'
 import { middleware } from '#start/kernel'
 
-// Auth routes (public)
+// Login routes (public)
 router.post('/register', '#controllers/authController.register')
 router.post('/login', '#controllers/authController.login')
 
@@ -21,22 +21,26 @@ router.get('/bencana/:id', '#controllers/bencanaController.show')
 // Bencana routes (protected)
 router
   .group(() => {
+    router.get('/users', '#controllers/usersController.index')
     router.post('/bencana', '#controllers/bencanaController.store')
-    router.put('/bencana/:id', '#controllers/bencanaController.update')
     router.delete('/bencana/:id', '#controllers/bencanaController.destroy')
   })
   .use(middleware.auth())
+  .use(middleware.admin())
 
 // Protected routes (need authentication)
 router
   .group(() => {
-    router.get('/users', '#controllers/usersController.index')
-    router.get('/users/:id', '#controllers/usersController.show')
     router.post('/users', '#controllers/usersController.store')
     router.put('/users/:id', '#controllers/usersController.update')
     router.delete('/users/:id', '#controllers/usersController.destroy')
   })
   .use(middleware.auth())
+  .use(middleware.admin())
+
+// Public user routes
+router.get('/users/:id', '#controllers/usersController.show')
+router.put('/bencana/:id', '#controllers/bencanaController.update')
 
 // GraphQL route (protected)
 router
@@ -44,3 +48,4 @@ router
     router.post('/graphql', '#controllers/graphqlController.handle')
   })
   .use(middleware.auth())
+  .use(middleware.admin())

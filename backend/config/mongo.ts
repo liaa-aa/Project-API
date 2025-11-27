@@ -1,6 +1,11 @@
 import mongoose from 'mongoose'
+import env from '#start/env'
 
-const mongoUrl = process.env.MONGODB_URI as string
+const mongoUrl = env.get('MONGODB_URI')
+
+if (!mongoUrl) {
+  throw new Error('MONGO_URI is not defined in environment variables')
+}
 
 mongoose.connect(mongoUrl)
 
