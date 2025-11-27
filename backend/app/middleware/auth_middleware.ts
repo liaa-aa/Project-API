@@ -6,8 +6,6 @@ import jwt from 'jsonwebtoken'
 export default class AuthMiddleware {
   async handle({ request, response }: HttpContext, next: NextFn) {
     const header = request.header('authorization')
-    // "Bearer wkdoakdokdoaodandawbcsackozaojxoaw"
-    // ["Bearer", "wkadkowdkaowakdoawkdowak"]
     if (!header) {
       return response.unauthorized({ message: 'Akses tidak sah' })
     }
@@ -25,4 +23,4 @@ export default class AuthMiddleware {
       return response.unauthorized({ message: 'Akses tidak sah' })
     }
   }
-}/*  */
+} /*  */
