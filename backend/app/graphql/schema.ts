@@ -48,6 +48,7 @@ export const schema = buildSchema(`
         deleteBencana(id: ID!): Bencana
 
         joinBencana(bencanaId: ID!): RegisRelawan
+        cancelJoinBencana(bencanaId: ID!): RegisRelawan
         updateRegistrationStatus(id: ID!, status: String!): RegisRelawan
     }
 `)

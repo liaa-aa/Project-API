@@ -107,6 +107,29 @@ export const root = {
     }
   },
 
+  async cancelJoinBencana({ bencanaId }: { bencanaId: string }, context: any) {
+    const user = context.user 
+    if (!user) {
+      throw new Error('Unauthorized')
+    }
+    const registration = await RegisRelawan.findOneAndDelete({
+      user: user.id,
+      bencana: bencanaId,
+    })
+    if (!registration) {
+      throw new Error('Registration not found')
+    }
+
+    return {
+      id: registration._id.toString(),
+      userId: registration.user.toString(),
+      bencanaId: registration.bencana.toString(),
+      status: registration.status,
+      createdAt: registration.createdAt.toISOString(),
+      updatedAt: registration.updatedAt.toISOString(),
+    }
+  },
+
   async myRegistrations(_: any, context: any) {
     const user = context.user
     if (!user) {
