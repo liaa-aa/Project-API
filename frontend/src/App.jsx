@@ -1,29 +1,32 @@
+// frontend/src/App.jsx
 import { Routes, Route } from "react-router-dom";
+
 import Navbar from "./components/Navbar";
-import Footer from "./components/Footer";
 import ProtectedRoute from "./components/ProtectedRoute";
 
 import Home from "./pages/Home";
+import Events from "./pages/Events";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Profile from "./pages/Profile";
-import Events from "./pages/Events";
+import AdminVolunteers from "./pages/AdminVolunteers";
 import EventDetail from "./pages/EventDetail";
 
-export default function App() {
+function App() {
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen flex flex-col bg-gray-50">
       <Navbar />
-
-      <main className="flex-1 container mx-auto p-4">
+      <main className="flex-1">
         <Routes>
           <Route path="/" element={<Home />} />
+          <Route path="/events" element={<Events />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/events" element={<Events />} />
           <Route path="/events/:id" element={<EventDetail />} />
 
-          {/* Private Page */}
+
+          {/* hanya butuh login */}
           <Route
             path="/profile"
             element={
@@ -32,10 +35,20 @@ export default function App() {
               </ProtectedRoute>
             }
           />
+
+          {/* khusus admin */}
+          <Route
+            path="/admin/volunteers"
+            element={
+              <ProtectedRoute allowedRoles={["admin"]}>
+                <AdminVolunteers />
+              </ProtectedRoute>
+            }
+          />
         </Routes>
       </main>
-
-      <Footer />
     </div>
   );
 }
+
+export default App;
