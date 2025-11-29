@@ -59,6 +59,7 @@
     "@types/bcryptjs": "^2.4.6",
     "@vinejs/vine": "^3.0.1",
     "bcryptjs": "^3.0.3",
+    "google-auth-library": "^10.5.0",
     "graphql": "^16.12.0",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.0.0",

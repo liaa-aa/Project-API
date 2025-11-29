@@ -13,6 +13,7 @@ import { middleware } from '#start/kernel'
 // Login routes (public)
 router.post('/register', '#controllers/authController.register')
 router.post('/login', '#controllers/authController.login')
+router.post('/google-login', '#controllers/authController.googleLogin')
 
 // Bencana routes (public)
 router.get('/bencana', '#controllers/bencanaController.index')
