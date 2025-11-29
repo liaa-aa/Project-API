@@ -1,53 +1,69 @@
 // frontend/src/App.jsx
+
 import { Routes, Route } from "react-router-dom";
-
 import Navbar from "./components/Navbar";
-import ProtectedRoute from "./components/ProtectedRoute";
 
+// Halaman publik & user
 import Home from "./pages/Home";
 import Events from "./pages/Events";
+import EventDetail from "./pages/EventDetail";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Profile from "./pages/Profile";
+
+// Halaman admin
 import AdminVolunteers from "./pages/AdminVolunteers";
-import EventDetail from "./pages/EventDetail";
+import AdminEvents from "./pages/AdminEvents";
+
+// Proteksi route
+import ProtectedRoute from "./components/ProtectedRoute";
 
 function App() {
   return (
-    <div className="min-h-screen flex flex-col bg-gray-50">
-      <Navbar />
-      <main className="flex-1">
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/events" element={<Events />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
-          <Route path="/events" element={<Events />} />
-          <Route path="/events/:id" element={<EventDetail />} />
+      <div className="min-h-screen bg-gray-50">
+        {/* Navbar selalu muncul di atas */}
+        <Navbar />
 
+        <main className="py-4">
+          <Routes>
+            {/* --------- ROUTE PUBLIK --------- */}
+            <Route path="/" element={<Home />} />
+            <Route path="/events" element={<Events />} />
+            <Route path="/events/:id" element={<EventDetail />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
 
-          {/* hanya butuh login */}
-          <Route
-            path="/profile"
-            element={
-              <ProtectedRoute>
-                <Profile />
-              </ProtectedRoute>
-            }
-          />
+            {/* --------- ROUTE USER (BUTUH LOGIN) --------- */}
+            <Route
+              path="/profile"
+              element={
+                <ProtectedRoute>
+                  <Profile />
+                </ProtectedRoute>
+              }
+            />
 
-          {/* khusus admin */}
-          <Route
-            path="/admin/volunteers"
-            element={
-              <ProtectedRoute allowedRoles={["admin"]}>
-                <AdminVolunteers />
-              </ProtectedRoute>
-            }
-          />
-        </Routes>
-      </main>
-    </div>
+            {/* --------- ROUTE ADMIN --------- */}
+            <Route
+              path="/admin/volunteers"
+              element={
+                <ProtectedRoute requiredRole="admin">
+                  <AdminVolunteers />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/admin/events"
+              element={
+                <ProtectedRoute requiredRole="admin">
+                  <AdminEvents />
+                </ProtectedRoute>
+              }
+            />
+          </Routes>
+        </main>
+      </div>
   );
 }
 

@@ -1,25 +1,26 @@
-// frontend/src/components/Navbar.jsx
-import { Link, useLocation, useNavigate } from "react-router-dom";
+// src/components/Navbar.jsx
+
+import { Link, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 
-export default function Navbar() {
+const Navbar = () => {
   const navigate = useNavigate();
-  const location = useLocation();
-
   const [user, setUser] = useState(null);
 
+  // Baca user dari localStorage saat mount
   useEffect(() => {
-    const userRaw = localStorage.getItem("user");
-    if (userRaw) {
-      try {
-        setUser(JSON.parse(userRaw));
-      } catch {
-        setUser(null);
-      }
-    } else {
+    const raw = localStorage.getItem("user");
+    if (!raw) {
+      setUser(null);
+      return;
+    }
+    try {
+      const parsed = JSON.parse(raw);
+      setUser(parsed);
+    } catch {
       setUser(null);
     }
-  }, [location.pathname]); // update setiap ganti halaman
+  }, []);
 
   const handleLogout = () => {
     localStorage.removeItem("token");
@@ -28,51 +29,68 @@ export default function Navbar() {
     navigate("/login");
   };
 
-  const isLoggedIn = !!user;
-
   return (
-    <nav className="bg-white shadow p-4">
-      <div className="container mx-auto flex justify-between items-center">
-        <Link to="/" className="font-bold text-lg">
-          VolunteerApp
-        </Link>
+    <nav className="bg-white border-b shadow-sm">
+      <div className="max-w-6xl mx-auto px-4 py-2 flex items-center justify-between">
+        {/* Brand */}
+        <div className="flex items-center gap-2">
+          <Link to="/" className="font-bold text-lg text-blue-600">
+            RelawanBencana
+          </Link>
+        </div>
 
-        <div className="flex gap-4 items-center text-sm">
-          <Link to="/">Home</Link>
-          <Link to="/events">Events</Link>
+        {/* Menu kanan */}
+        <div className="flex items-center gap-4 text-sm">
+          {/* Link umum */}
+          <Link to="/events" className="hover:text-blue-600">
+            Events
+          </Link>
 
-          {isLoggedIn && user.role === "relawan" && (
+          {user ? (
             <>
-              <Link to="/profile">Profile</Link>
-            </>
-          )}
+              {/* Kalau admin, tampilkan menu admin */}
+              {user.role === "admin" && (
+                <>
+                  <Link
+                    to="/admin/volunteers"
+                    className="hover:text-blue-600"
+                  >
+                    Admin Volunteers
+                  </Link>
+                  <Link to="/admin/events" className="hover:text-blue-600">
+                    Admin Events
+                  </Link>
+                </>
+              )}
 
-          {isLoggedIn && user.role === "admin" && (
-            <>
-              <Link to="/admin/volunteers">Manage Volunteers</Link>
-              {/* bisa ditambah Manage Events dsb */}
-            </>
-          )}
+              {/* Profil */}
+              <Link to="/profile" className="hover:text-blue-600">
+                Profile
+              </Link>
 
-          {isLoggedIn ? (
-            <>
-              <span className="text-gray-500">
-                {user.name} ({user.role})
-              </span>
+              {/* Logout */}
               <button
                 onClick={handleLogout}
-                className="text-red-600 hover:underline"
+                className="px-3 py-1 rounded bg-red-500 text-white text-xs"
               >
                 Logout
               </button>
             </>
           ) : (
+            // Kalau belum login
             <>
-              <Link to="/login">Login</Link>
+              <Link to="/login" className="hover:text-blue-600">
+                Login
+              </Link>
+              <Link to="/register" className="hover:text-blue-600">
+                Register
+              </Link>
             </>
           )}
         </div>
       </div>
     </nav>
   );
-}
+};
+
+export default Navbar;
