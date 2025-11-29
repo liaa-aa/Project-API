@@ -5,8 +5,6 @@ Aplikasi web untuk manajemen event volunteer dan bencana dengan arsitektur fulls
 ## 📋 Daftar Isi
 
 - [Teknologi](#teknologi)
-- [Fitur](#fitur)
-- [Struktur Project](#struktur-project)
 - [Setup Backend](#setup-backend)
 - [Setup Frontend](#setup-frontend)
 - [Seeder Usage](#seeder-usage)
@@ -17,9 +15,10 @@ Aplikasi web untuk manajemen event volunteer dan bencana dengan arsitektur fulls
 ### Backend
 - **Framework**: AdonisJS v6
 - **Database**: MongoDB (Mongoose)
-- **Authentication**: JWT (JSON Web Token)
+- **Authentication**: JWT + Google OAuth
 - **Language**: TypeScript
 - **API**: REST API + GraphQL
+- **OAuth**: Google Auth Library
 
 ### Frontend
 - **Framework**: React 19
@@ -28,60 +27,12 @@ Aplikasi web untuk manajemen event volunteer dan bencana dengan arsitektur fulls
 - **HTTP Client**: Axios
 - **Build Tool**: Vite
 
-## ✨ Fitur
-
-### Authentication
-- ✅ User Registration
-- ✅ User Login
-- ✅ JWT Token Authentication
-- ✅ Role-based Access (Admin/User)
-- ✅ Protected Routes
-
-### User Management
-- ✅ CRUD Users (Admin only)
-- ✅ User Profile
-- ✅ Role Management
-
-### Bencana Management
-- ✅ CRUD Bencana (Admin only)
-- ✅ View Public Bencana List
-- ✅ Bencana Detail
-- ✅ GraphQL Support
-
-### Frontend Features
-- ✅ Responsive Design
-- ✅ Protected Routes
-- ✅ Event Management UI
-- ✅ User Authentication UI
-
-## 📁 Struktur Project
-
-```
-Project-API/
-├── backend/                 # AdonisJS Backend
-│   ├── app/
-│   │   ├── controllers/     # API Controllers
-│   │   ├── middleware/      # Custom Middleware
-│   │   ├── models/         # Database Models
-│   │   └── graphql/        # GraphQL Schema & Resolvers
-│   ├── config/             # Configuration Files
-│   ├── start/              # Application Bootstrap
-│   └── .env               # Environment Variables
-│
-└── frontend/               # React Frontend
-    ├── src/
-    │   ├── api/           # API Service Layer
-    │   ├── components/    # Reusable Components
-    │   ├── pages/        # Page Components
-    │   └── App.jsx       # Main App Component
-    └── package.json
-```
-
 ## 🚀 Setup Backend
 
 ### Prerequisites
 - Node.js (v18+)
 - MongoDB Atlas Account
+- Google Cloud Console Account (untuk OAuth)
 - Git
 
 ### Installation
@@ -118,9 +69,18 @@ Project-API/
    
    MONGODB_URI=your_mongodb_connection_string
    MONGO_DB_NAME=VoulenteerEvent
+   
+   GOOGLE_CLIENT_ID=your_google_client_id_here
    ```
 
-5. **Run Development Server**
+5. **Setup Google OAuth**
+   - Buka [Google Cloud Console](https://console.cloud.google.com/)
+   - Buat project baru atau pilih existing project
+   - Enable Google+ API
+   - Buat OAuth 2.0 credentials
+   - Copy Client ID ke .env
+
+6. **Run Development Server**
    ```bash
    npm run dev
    ```
@@ -152,7 +112,11 @@ npm run typecheck  # TypeScript type checking
    npm install
    ```
 
-3. **Run Development Server**
+3. **Configure Environment**
+   - Update API base URL jika perlu
+   - Setup Google OAuth client ID untuk frontend
+
+4. **Run Development Server**
    ```bash
    npm run dev
    ```
@@ -190,7 +154,7 @@ npm run seed
 - **Email**: `john@volunteer.com` / **Password**: `volunteer123`
 - **Email**: `jane@volunteer.com` / **Password**: `volunteer123`
 - **Email**: `bob@volunteer.com` / **Password**: `volunteer123`
-- **Role**: `user`
+- **Role**: `relawan`
 
 ### Kapan Menggunakan Seeder:
 - Setup development environment baru
@@ -246,6 +210,16 @@ Content-Type: application/json
 }
 ```
 
+**Google Login:**
+```http
+POST {{base_url}}/google-login
+Content-Type: application/json
+
+{
+  "idToken": "google_id_token_from_frontend"
+}
+```
+
 #### **2. Test Public Endpoints**
 
 **Get All Bencana:**
@@ -281,6 +255,50 @@ Content-Type: application/json
 }
 ```
 
+#### **4. Test Volunteer Registration**
+
+**Join Bencana (User):**
+```http
+POST {{base_url}}/bencana/BENCANA_ID/join
+Authorization: Bearer {{token}}
+```
+
+**My Registrations (User):**
+```http
+GET {{base_url}}/me/registrations
+Authorization: Bearer {{token}}
+```
+
+**Cancel Registration (User):**
+```http
+DELETE {{base_url}}/bencana/BENCANA_ID/leave
+Authorization: Bearer {{token}}
+```
+
+#### **5. Test GraphQL (Admin)**
+
+**GraphQL Query:**
+```http
+POST {{base_url}}/graphql
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "query": "query { getBencana { id title location type } }"
+}
+```
+
+**GraphQL Mutation:**
+```http
+POST {{base_url}}/graphql
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "query": "mutation { joinBencana(bencanaId: \"BENCANA_ID\") { id status } }"
+}
+```
+
 ### Tips Postman Testing
 
 1. **Save Token Otomatis**
@@ -300,7 +318,7 @@ Content-Type: application/json
    ```
 
 3. **Organize dengan Collections**
-   - Buat folder: "Authentication", "Bencana", "Users"
+   - Buat folder: "Authentication", "Bencana", "Users", "Volunteer Registration"
    - Group related requests
 
 ### Expected Responses
@@ -319,10 +337,37 @@ Content-Type: application/json
 }
 ```
 
+**Google Login Success:**
+```json
+{
+  "message": "Login dengan Google berhasil",
+  "token": "eyJhbGciOiJIUzI1NiIs...",
+  "user": {
+    "id": "user_id",
+    "name": "John Doe",
+    "email": "john@gmail.com",
+    "role": "relawan"
+  }
+}
+```
+
 **Unauthorized (tanpa token):**
 ```json
 {
   "message": "Akses tidak sah"
+}
+```
+
+**Join Bencana Success:**
+```json
+{
+  "message": "Berhasil mendaftar sebagai relawan",
+  "data": {
+    "id": "registration_id",
+    "user": "user_id",
+    "bencana": "bencana_id",
+    "status": "pending"
+  }
 }
 ```
 
