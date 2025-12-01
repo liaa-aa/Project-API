@@ -7,6 +7,7 @@ const BencanaSchema = new mongoose.Schema(
     location: { type: String, required: true },
     type: { type: String, required: true },
     date: { type: Date, required: true },
+    maxVolunteers: { type: Number, required: true },
   },
   {
     timestamps: true,

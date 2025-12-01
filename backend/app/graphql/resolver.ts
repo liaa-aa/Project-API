@@ -17,19 +17,21 @@ export const root = {
       location,
       type,
       date,
+      maxVolunteers,
     }: {
       title: string
       description: string
       location: string
       type: string
       date: string
+      maxVolunteers?: number
     },
     context: any
   ) {
     if (context.user?.role !== 'admin') {
       throw new Error('Unauthorized')
     }
-    const bencana = new Bencana({ title, description, location, type, date })
+    const bencana = new Bencana({ title, description, location, type, date, maxVolunteers })
     return await bencana.save()
   },
 
@@ -41,6 +43,7 @@ export const root = {
       location,
       type,
       date,
+      maxVolunteers,
     }: {
       id: string
       title?: string
@@ -48,17 +51,27 @@ export const root = {
       location?: string
       type?: string
       date?: string
+      maxVolunteers?: number
     },
     context: any
   ) {
     if (context.user?.role !== 'admin') {
       throw new Error('Unauthorized')
     }
-    return await Bencana.findByIdAndUpdate(
-      id,
-      { title, description, location, type, date },
-      { new: true }
-    )
+    const updates: any = {}
+    if (title !== undefined) updates.title = title
+    if (description !== undefined) updates.description = description
+    if (location !== undefined) updates.location = location
+    if (type !== undefined) updates.type = type
+    if (date !== undefined) updates.date = date
+    if (maxVolunteers !== undefined) updates.maxVolunteers = maxVolunteers // ➕ NEW
+
+    const bencana = await Bencana.findByIdAndUpdate(id, updates, { new: true })
+    if (!bencana) {
+      throw new Error('Bencana not found')
+    }
+
+    return bencana
   },
   async deleteBencana({ id }: { id: string }, context: any) {
     if (context.user?.role !== 'admin') {
@@ -82,6 +95,16 @@ export const root = {
     const bencana = await Bencana.findById(bencanaId)
     if (!bencana) {
       throw new Error('Bencana not found')
+    }
+
+    if (bencana.maxVolunteers && bencana.maxVolunteers > 0) {
+      const currentCount = await RegisRelawan.countDocuments({
+        bencana: bencanaId,
+      })
+
+      if (currentCount >= bencana.maxVolunteers) {
+        throw new Error('limit of volunteers reached for this event')
+      }
     }
 
     try {
@@ -108,7 +131,7 @@ export const root = {
   },
 
   async cancelJoinBencana({ bencanaId }: { bencanaId: string }, context: any) {
-    const user = context.user 
+    const user = context.user
     if (!user) {
       throw new Error('Unauthorized')
     }
