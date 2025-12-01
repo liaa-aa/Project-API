@@ -1,59 +1,16 @@
-// frontend/src/pages/Login.jsx
+// src/pages/Login.jsx
 
-import { Link, useNavigate } from "react-router-dom";
-import { login, googleLogin } from "../api/authApi";
-import { useState, useEffect, useRef } from "react";
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { login } from "../api/authApi"; // SESUAIKAN path-nya kalau beda
 
-export default function Login() {
+const Login = () => {
   const navigate = useNavigate();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-
-  const googleButtonRef = useRef(null);
-
-  useEffect(() => {
-  const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
-
-  if (!clientId) {
-    console.warn("VITE_GOOGLE_CLIENT_ID belum di-set di .env");
-    return;
-  }
-
-  // pastikan script GIS sudah loaded
-  if (!window.google || !window.google.accounts || !googleButtonRef.current) {
-    return;
-  }
-
-  window.google.accounts.id.initialize({
-    client_id: clientId,
-    callback: async (response) => {
-      // response.credential = idToken dari Google
-      try {
-        const data = await googleLogin(response.credential);
-
-        localStorage.setItem("token", data.token);
-        localStorage.setItem("user", JSON.stringify(data.user));
-
-        navigate("/");
-      } catch (err) {
-        setError(err.message || "Terjadi kesalahan saat login Google");
-      }
-    },
-  });
-
-  window.google.accounts.id.renderButton(googleButtonRef.current, {
-    type: "standard",
-    theme: "outline",
-    size: "large",
-    text: "continue_with",
-    shape: "pill",
-    width: 300,
-  });
-}, [navigate]);
+  const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -61,89 +18,78 @@ export default function Login() {
     setLoading(true);
 
     try {
+      // panggil API login (harus return { token, user })
       const data = await login(email, password);
 
-      // simpan token & user ke localStorage
+      // simpan ke localStorage
       localStorage.setItem("token", data.token);
       localStorage.setItem("user", JSON.stringify(data.user));
 
-      navigate("/"); // bisa diarahkan ke /profile kalau mau
+      // arahkan sesuai role
+      if (data.user.role === "admin") {
+        navigate("/admin/volunteers");
+      } else {
+        navigate("/");
+      }
     } catch (err) {
-      setError(err.message || "Terjadi kesalahan");
+      console.error(err);
+      const msg =
+        err?.response?.data?.message ||
+        err?.message ||
+        "Login gagal, periksa email/password";
+      setError(msg);
     } finally {
       setLoading(false);
     }
   };
 
-
   return (
-    <div className="max-w-md mx-auto bg-white shadow p-6 rounded mt-8">
-      <h2 className="text-2xl font-bold mb-4 text-center">
-        Masuk atau Daftar
-      </h2>
+    <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="w-full max-w-md bg-white rounded-lg shadow p-6">
+        <h1 className="text-2xl font-bold mb-4 text-center">Login</h1>
 
-      {/* Button Google */}
-      <div className="w-full flex justify-center mb-4">
-  <div ref={googleButtonRef}></div>
-</div>
+        {error && (
+          <div className="mb-4 text-sm text-red-600 bg-red-50 p-2 rounded">
+            {error}
+          </div>
+        )}
 
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-sm mb-1">Email</label>
+            <input
+              type="email"
+              className="w-full border rounded px-3 py-2 text-sm"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              placeholder="admin@example.com"
+            />
+          </div>
 
-      <div className="flex items-center my-4">
-        <div className="flex-1 h-px bg-gray-300" />
-        <span className="mx-2 text-gray-500 text-sm">atau</span>
-        <div className="flex-1 h-px bg-gray-300" />
+          <div>
+            <label className="block text-sm mb-1">Password</label>
+            <input
+              type="password"
+              className="w-full border rounded px-3 py-2 text-sm"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              placeholder="••••••••"
+            />
+          </div>
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 disabled:opacity-60"
+          >
+            {loading ? "Logging in..." : "Login"}
+          </button>
+        </form>
       </div>
-
-      {/* Error message */}
-      {error && (
-        <div className="mb-4 text-sm text-red-600 bg-red-50 border border-red-200 p-2 rounded">
-          {error}
-        </div>
-      )}
-
-      {/* Form login email + password */}
-      <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
-        <div>
-          <label className="block text-sm mb-1">Email</label>
-          <input
-            className="border p-2 rounded w-full"
-            placeholder="you@example.com"
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-            autoComplete="email"
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm mb-1">Password</label>
-          <input
-            className="border p-2 rounded w-full"
-            placeholder="••••••••"
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            autoComplete="current-password"
-          />
-        </div>
-
-        <button
-          type="submit"
-          className="bg-blue-600 text-white p-2 rounded hover:bg-blue-700 disabled:opacity-60"
-          disabled={loading}
-        >
-          {loading ? "Masuk..." : "Masuk"}
-        </button>
-      </form>
-
-      <p className="text-sm text-center mt-4">
-        Belum punya akun?{" "}
-        <Link to="/register" className="text-blue-600 hover:underline">
-          Daftar dengan email
-        </Link>
-      </p>
     </div>
   );
-}
+};
+
+export default Login;

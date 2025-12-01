@@ -1,60 +1,63 @@
 // src/components/Navbar.jsx
 
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useEffect, useState } from "react";
 
 const Navbar = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+
+  // simpan user di state supaya UI bisa berubah ketika logout/login
   const [user, setUser] = useState(null);
 
-  // Baca user dari localStorage saat mount
+  // Baca ulang user dari localStorage setiap kali URL berubah
   useEffect(() => {
     const raw = localStorage.getItem("user");
+
     if (!raw) {
       setUser(null);
       return;
     }
+
     try {
       const parsed = JSON.parse(raw);
       setUser(parsed);
-    } catch {
+    } catch (e) {
+      console.error("Gagal parse user dari localStorage", e);
       setUser(null);
     }
-  }, []);
+  }, [location]); // <-- jalan lagi tiap route berubah (termasuk setelah navigate)
 
   const handleLogout = () => {
+    // bersihkan localStorage
     localStorage.removeItem("token");
     localStorage.removeItem("user");
+
+    // reset state user supaya navbar LANGSUNG berubah
     setUser(null);
+
+    // pindah ke halaman login
     navigate("/login");
   };
 
   return (
-    <nav className="bg-white border-b shadow-sm">
-      <div className="max-w-6xl mx-auto px-4 py-2 flex items-center justify-between">
-        {/* Brand */}
-        <div className="flex items-center gap-2">
-          <Link to="/" className="font-bold text-lg text-blue-600">
-            VolunteerEvent
-          </Link>
-        </div>
+    <nav className="bg-white shadow">
+      <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
+        <Link to="/" className="text-xl font-bold text-blue-600">
+          VolunteerEvent
+        </Link>
 
-        {/* Menu kanan */}
-        <div className="flex items-center gap-4 text-sm">
-          {/* Link umum */}
+        <div className="flex items-center gap-4">
           <Link to="/events" className="hover:text-blue-600">
             Events
           </Link>
 
           {user ? (
             <>
-              {/* Kalau admin, tampilkan menu admin */}
+              {/* Menu khusus admin */}
               {user.role === "admin" && (
                 <>
-                  <Link
-                    to="/admin/volunteers"
-                    className="hover:text-blue-600"
-                  >
+                  <Link to="/admin/volunteers" className="hover:text-blue-600">
                     Admin Volunteers
                   </Link>
                   <Link to="/admin/events" className="hover:text-blue-600">
@@ -63,21 +66,18 @@ const Navbar = () => {
                 </>
               )}
 
-              {/* Profil */}
               <Link to="/profile" className="hover:text-blue-600">
-                Profile
+                Profil
               </Link>
 
-              {/* Logout */}
               <button
                 onClick={handleLogout}
-                className="px-3 py-1 rounded bg-red-500 text-white text-xs"
+                className="px-3 py-1 rounded bg-red-500 text-white hover:bg-red-600"
               >
                 Logout
               </button>
             </>
           ) : (
-            // Kalau belum login
             <>
               <Link to="/login" className="hover:text-blue-600">
                 Login
