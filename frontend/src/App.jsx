@@ -17,6 +17,7 @@ import AdminEvents from "./pages/AdminEvents";
 
 // Proteksi route
 import ProtectedRoute from "./components/ProtectedRoute";
+import Footer from "./components/Footer";
 
 function App() {
   return (
@@ -24,7 +25,7 @@ function App() {
         {/* Navbar selalu muncul di atas */}
         <Navbar />
 
-        <main className="py-4">
+        <main className="py-4 h-100">
           <Routes>
             {/* --------- ROUTE PUBLIK --------- */}
             <Route path="/" element={<Home />} />
@@ -63,6 +64,7 @@ function App() {
             />
           </Routes>
         </main>
+        <Footer/>
       </div>
   );
 }

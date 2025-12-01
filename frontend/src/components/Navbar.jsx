@@ -35,7 +35,7 @@ const Navbar = () => {
         {/* Brand */}
         <div className="flex items-center gap-2">
           <Link to="/" className="font-bold text-lg text-blue-600">
-            RelawanBencana
+            VolunteerEvent
           </Link>
         </div>
 
