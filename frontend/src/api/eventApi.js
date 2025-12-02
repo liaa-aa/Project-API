@@ -1,7 +1,10 @@
-// frontend/src/api/eventApi.js
+// ===============================
+//  API CONFIG
+// ===============================
 
-const API_BASE_URL = "http://localhost:3333"; // sesuaikan kalau beda
+const API_BASE_URL = "http://localhost:3333";
 
+// Header dengan token untuk endpoint yang membutuhkan Auth
 const getAuthHeaders = () => {
   const token = localStorage.getItem("token");
   return token
@@ -12,9 +15,7 @@ const getAuthHeaders = () => {
     : { "Content-Type": "application/json" };
 };
 
-/**
- * Helper untuk call GraphQL ke /graphql (BUTUH JWT, karena /graphql pakai middleware.auth()).
- */
+// Helper GraphQL (untuk endpoint yang butuh login)
 const graphqlRequest = async (query, variables = {}) => {
   const res = await fetch(`${API_BASE_URL}/graphql`, {
     method: "POST",
@@ -22,78 +23,47 @@ const graphqlRequest = async (query, variables = {}) => {
     body: JSON.stringify({ query, variables }),
   });
 
-  const json = await res.json().catch(() => ({}));
-
-  // Error HTTP dari Adonis (misalnya unauthorized)
-  if (!res.ok) {
-    throw new Error(
-      json?.errors?.[0]?.message ||
-        json?.message ||
-        "Gagal memproses permintaan ke server"
-    );
-  }
-
-  // Error dari GraphQL (schema/resolver)
+  const json = await res.json();
   if (json.errors && json.errors.length > 0) {
-    throw new Error(json.errors[0].message || "Terjadi error pada GraphQL");
+    throw new Error(json.errors[0].message || "Error pada GraphQL");
   }
 
   return json.data;
 };
 
-// ===================
-// BENCANA / EVENT (GraphQL)
-// ===================
+// ===============================
+//  PUBLIC EVENT ENDPOINTS (REST)
+// ===============================
 
-// Query: getBencana: [Bencana!]!
+// Ambil semua event — PUBLIC
 export const getEvents = async () => {
-  const query = `
-    query GetBencana {
-      getBencana {
-        id
-        title
-        description
-        location
-        type
-        date
-      }
-    }
-  `;
+  const res = await fetch(`${API_BASE_URL}/bencana`, {
+    method: "GET",
+    headers: { "Content-Type": "application/json" },
+  });
 
-  const data = await graphqlRequest(query);
-  // Events.jsx pakai ev._id || ev.id -> di sini hanya ada "id", tidak masalah
-  return data?.getBencana || [];
+  if (!res.ok) throw new Error("Gagal mengambil data event");
+
+  return await res.json();
 };
 
-// Query: getBencanaById(id: ID!): Bencana
+// Ambil detail event — PUBLIC
 export const getEventById = async (id) => {
-  const query = `
-    query GetBencanaById($id: ID!) {
-      getBencanaById(id: $id) {
-        id
-        title
-        description
-        location
-        type
-        date
-      }
-    }
-  `;
+  const res = await fetch(`${API_BASE_URL}/bencana/${id}`, {
+    method: "GET",
+    headers: { "Content-Type": "application/json" },
+  });
 
-  const data = await graphqlRequest(query, { id });
+  if (!res.ok) throw new Error("Gagal mengambil detail event");
 
-  if (!data?.getBencanaById) {
-    throw new Error("Event tidak ditemukan");
-  }
-
-  return data.getBencanaById;
+  return await res.json();
 };
 
-// ===================
-// REGISTRASI RELAWAN (GraphQL)
-// ===================
+// ===============================
+//  RELAWAN REGISTRATION (PROTECTED)
+// ===============================
 
-// Mutation: joinBencana(bencanaId: ID!): RegisRelawan
+// Daftar sebagai relawan — login wajib
 export const joinEvent = async (bencanaId) => {
   const query = `
     mutation JoinBencana($bencanaId: ID!) {
@@ -110,52 +80,47 @@ export const joinEvent = async (bencanaId) => {
 
   const data = await graphqlRequest(query, { bencanaId });
 
-  // EventDetail.jsx mengharapkan { message, data }
   return {
     message: "Berhasil mendaftar sebagai relawan",
-    data: data?.joinBencana || null,
+    data: data?.joinBencana,
   };
 };
 
-// Query: myRegistrations: [RegisRelawan!]!
+// Ambil daftar event yang user sudah daftar — login wajib
 export const getMyRegistrations = async () => {
   const query = `
-    query MyRegistrations {
+    query {
       myRegistrations {
         id
-        userId
         bencanaId
         status
         createdAt
-        updatedAt
       }
     }
   `;
 
   const data = await graphqlRequest(query);
-  // EventDetail.jsx mencari bencanaId lewat r.bencanaId -> aman
   return data?.myRegistrations || [];
 };
 
-// Mutation: cancelJoinBencana(bencanaId: ID!): RegisRelawan
-export const cancelEventRegistration = async (bencanaId) => {
+// Batalkan pendaftaran relawan — login wajib
+export const cancelEventRegistration = async (registrationId) => {
   const query = `
-    mutation CancelJoinBencana($bencanaId: ID!) {
-      cancelJoinBencana(bencanaId: $bencanaId) {
+    mutation CancelRegistration($registrationId: ID!) {
+      cancelRegistration(registrationId: $registrationId) {
         id
         userId
         bencanaId
         status
-        createdAt
         updatedAt
       }
     }
   `;
 
-  const data = await graphqlRequest(query, { bencanaId });
+  const data = await graphqlRequest(query, { registrationId });
 
   return {
     message: "Pendaftaran berhasil dibatalkan",
-    data: data?.cancelJoinBencana || null,
+    data: data?.cancelRegistration,
   };
 };

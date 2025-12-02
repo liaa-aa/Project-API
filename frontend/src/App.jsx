@@ -21,51 +21,48 @@ import Footer from "./components/Footer";
 
 function App() {
   return (
-      <div className="min-h-screen bg-gray-50">
-        {/* Navbar selalu muncul di atas */}
-        <Navbar />
+    <div className="min-h-screen flex flex-col bg-slate-50">
+      <Navbar />
 
-        <main className="py-4 h-100">
-          <Routes>
-            {/* --------- ROUTE PUBLIK --------- */}
-            <Route path="/" element={<Home />} />
-            <Route path="/events" element={<Events />} />
-            <Route path="/events/:id" element={<EventDetail />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} />
+      <main className="flex-1 pt-0">
+        <Routes>
+          <Route path="/" element={<Home />} />
+          <Route path="/events" element={<Events />} />
+          <Route path="/events/:id" element={<EventDetail />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
 
-            {/* --------- ROUTE USER (BUTUH LOGIN) --------- */}
-            <Route
-              path="/profile"
-              element={
-                <ProtectedRoute>
-                  <Profile />
-                </ProtectedRoute>
-              }
-            />
+          <Route
+            path="/profile"
+            element={
+              <ProtectedRoute>
+                <Profile />
+              </ProtectedRoute>
+            }
+          />
 
-            {/* --------- ROUTE ADMIN --------- */}
-            <Route
-              path="/admin/volunteers"
-              element={
-                <ProtectedRoute requiredRole="admin">
-                  <AdminVolunteers />
-                </ProtectedRoute>
-              }
-            />
+          <Route
+            path="/admin/volunteers"
+            element={
+              <ProtectedRoute requiredRole="admin">
+                <AdminVolunteers />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/events"
+            element={
+              <ProtectedRoute requiredRole="admin">
+                <AdminEvents />
+              </ProtectedRoute>
+            }
+          />
+        </Routes>
+      </main>
 
-            <Route
-              path="/admin/events"
-              element={
-                <ProtectedRoute requiredRole="admin">
-                  <AdminEvents />
-                </ProtectedRoute>
-              }
-            />
-          </Routes>
-          <Footer/>
-        </main>
-      </div>
+      {/* footer di paling bawah */}
+      <Footer />
+    </div>
   );
 }
 

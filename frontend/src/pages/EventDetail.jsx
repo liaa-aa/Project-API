@@ -1,6 +1,6 @@
 // frontend/src/pages/EventDetail.jsx
 import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import {
   getEventById,
   joinEvent,
@@ -10,6 +10,7 @@ import {
 
 export default function EventDetail() {
   const { id } = useParams();
+  const navigate = useNavigate();
 
   const [event, setEvent] = useState(null);
   const [loadingEvent, setLoadingEvent] = useState(false);
@@ -157,9 +158,16 @@ export default function EventDetail() {
             )}
 
             {!isLoggedIn && (
-              <p className="text-sm text-gray-500">
-                Silakan login untuk mendaftar sebagai relawan.
-              </p>
+              <div className="mt-4">
+                <button
+                  onClick={() =>
+                    navigate("/login")
+                  }
+                  className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 disabled:opacity-60 text-sm"
+                >
+                  Daftar sebagai relawan
+                </button>
+              </div>
             )}
 
             {isLoggedIn && (
