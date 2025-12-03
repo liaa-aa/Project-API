@@ -3,11 +3,47 @@ import RegisRelawan from '#models/regis_relawan'
 
 export const root = {
   async getBencana() {
-    return await Bencana.find()
+    const bencanas = await Bencana.find()
+
+    const results = []
+
+    for (const bencana of bencanas) {
+      const currentVolunteers = await RegisRelawan.countDocuments({
+        bencana: bencana._id,
+      })
+
+      results.push({
+        id: bencana._id.toString(),
+        title: bencana.title,
+        description: bencana.description,
+        location: bencana.location,
+        type: bencana.type,
+        date: bencana.date.toISOString(),
+        maxVolunteers: bencana.maxVolunteers,currentVolunteers,
+      })
+      return results
+    }
   },
 
   async getBencanaById({ id }: { id: string }) {
-    return await Bencana.findById(id)
+    const bencana = await Bencana.findById(id)
+    if (!bencana) {
+      return null
+    }
+
+    const currentVolunteers = await RegisRelawan.countDocuments({
+      bencana: bencana._id,
+    })
+
+    return {
+      id: bencana._id.toString(),
+      title: bencana.title,
+      description: bencana.description,
+      location: bencana.location,
+      type: bencana.type,
+      date: bencana.date.toISOString(),
+      maxVolunteers: bencana.maxVolunteers,currentVolunteers
+    }
   },
 
   async createBencana(
