@@ -10,6 +10,7 @@ export const root = {
     for (const bencana of bencanas) {
       const currentVolunteers = await RegisRelawan.countDocuments({
         bencana: bencana._id,
+        status: 'approved',
       })
 
       results.push({
@@ -21,8 +22,8 @@ export const root = {
         date: bencana.date.toISOString(),
         maxVolunteers: bencana.maxVolunteers,currentVolunteers,
       })
-      return results
     }
+    return results
   },
 
   async getBencanaById({ id }: { id: string }) {
@@ -33,6 +34,7 @@ export const root = {
 
     const currentVolunteers = await RegisRelawan.countDocuments({
       bencana: bencana._id,
+      status: 'approved',
     })
 
     return {
@@ -136,6 +138,7 @@ export const root = {
     if (bencana.maxVolunteers && bencana.maxVolunteers > 0) {
       const currentCount = await RegisRelawan.countDocuments({
         bencana: bencanaId,
+        status: 'approved',
       })
 
       if (currentCount >= bencana.maxVolunteers) {
