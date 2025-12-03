@@ -1,6 +1,6 @@
 export default function Footer() {
   return (
-    <footer className="mt-0 w-full bg-gradient-to-r from-blue-600 via-sky-500 to-cyan-400 text-white py-8">
+    <footer className="mt-0 w-full bg-linear-to-r rounded-t-4xl from-blue-600 via-sky-500 to-cyan-400 text-white py-8">
       <div className="relative max-w-6xl mx-auto px-4 text-center space-y-2">
         {/* dekorasi blur kalau mau, tapi ini tidak memengaruhi tinggi */}
         {/* 

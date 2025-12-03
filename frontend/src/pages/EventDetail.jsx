@@ -147,6 +147,12 @@ export default function EventDetail() {
               </span>
             </p>
           )}
+          {typeof event.maxVolunteers === "number" && (
+            <p className="text-gray-700 mb-1">
+              Maksimal relawan:{" "}
+              <span className="font-semibold">{event.maxVolunteers}</span>
+            </p>
+          )}
           <p className="text-gray-600 mt-3">{event.description}</p>
 
           {/* status & tombol aksi */}
@@ -160,9 +166,7 @@ export default function EventDetail() {
             {!isLoggedIn && (
               <div className="mt-4">
                 <button
-                  onClick={() =>
-                    navigate("/login")
-                  }
+                  onClick={() => navigate("/login")}
                   className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 disabled:opacity-60 text-sm"
                 >
                   Daftar sebagai relawan

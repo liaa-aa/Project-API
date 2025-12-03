@@ -18,6 +18,7 @@ import AdminEvents from "./pages/AdminEvents";
 // Proteksi route
 import ProtectedRoute from "./components/ProtectedRoute";
 import Footer from "./components/Footer";
+import AdminUsers from "./pages/AdminUsers";
 
 function App() {
   return (
@@ -54,6 +55,15 @@ function App() {
             element={
               <ProtectedRoute requiredRole="admin">
                 <AdminEvents />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/admin/users"
+            element={
+              <ProtectedRoute requiredRole="admin">
+                <AdminUsers />
               </ProtectedRoute>
             }
           />

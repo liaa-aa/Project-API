@@ -20,7 +20,9 @@ export default function AdminEvents() {
     location: "",
     type: "",
     date: "",
+    maxVolunteers: "", // <--- tambahan
   });
+
 
   const [submitting, setSubmitting] = useState(false);
   const [successMsg, setSuccessMsg] = useState("");
@@ -52,8 +54,10 @@ export default function AdminEvents() {
       location: "",
       type: "",
       date: "",
+      maxVolunteers: "",
     });
   };
+
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -69,9 +73,14 @@ export default function AdminEvents() {
       type: event.type || "",
       // tanggal dari BE biasanya ISO, ambil bagian YYYY-MM-DD untuk input type="date"
       date: event.date ? event.date.slice(0, 10) : "",
+      maxVolunteers:
+        typeof event.maxVolunteers === "number"
+          ? String(event.maxVolunteers)
+          : "",
     });
     setSuccessMsg("");
   };
+
 
   const handleDeleteClick = async (eventId) => {
     if (!window.confirm("Yakin ingin menghapus event ini?")) return;
@@ -92,6 +101,11 @@ export default function AdminEvents() {
     setSuccessMsg("");
 
     try {
+      const maxVol = parseInt(form.maxVolunteers, 10);
+      if (!Number.isFinite(maxVol) || maxVol <= 0) {
+        throw new Error("Maksimal pendaftar harus angka lebih dari 0");
+      }
+
       const payload = {
         title: form.title,
         description: form.description,
@@ -99,6 +113,7 @@ export default function AdminEvents() {
         type: form.type,
         // kirim langsung YYYY-MM-DD; Date di backend bisa parse ini
         date: form.date,
+        maxVolunteers: maxVol,
       };
 
       if (isEditing) {
@@ -117,6 +132,7 @@ export default function AdminEvents() {
       setSubmitting(false);
     }
   };
+
 
   return (
     <div className="max-w-5xl mx-auto p-4">
@@ -189,6 +205,75 @@ export default function AdminEvents() {
                 className="w-full border rounded px-2 py-1 text-sm"
               />
             </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-1">
+                Maksimal Pendaftar (Relawan)
+              </label>
+              <input
+                type="number"
+                name="maxVolunteers"
+                min="1"
+                value={form.maxVolunteers}
+                onChange={handleChange}
+                className="w-full border rounded px-2 py-1 text-sm"
+                placeholder="contoh: 50"
+                required
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div>
+              <label className="block text-sm font-medium mb-1">Lokasi</label>
+              <input
+                type="text"
+                name="location"
+                value={form.location}
+                onChange={handleChange}
+                className="w-full border rounded px-2 py-1 text-sm"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-1">Tipe</label>
+              <input
+                type="text"
+                name="type"
+                value={form.type}
+                onChange={handleChange}
+                className="w-full border rounded px-2 py-1 text-sm"
+                placeholder="bencana alam, sosial, dll"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-1">Tanggal</label>
+              <input
+                type="date"
+                name="date"
+                value={form.date}
+                onChange={handleChange}
+                className="w-full border rounded px-2 py-1 text-sm"
+              />
+            </div>
+          </div>
+
+          {/* Tambahan: maksimal pendaftar */}
+          <div>
+            <label className="block text-sm font-medium mb-1">
+              Maksimal Pendaftar (Relawan)
+            </label>
+            <input
+              type="number"
+              name="maxVolunteers"
+              min="1"
+              value={form.maxVolunteers}
+              onChange={handleChange}
+              className="w-full border rounded px-2 py-1 text-sm"
+              placeholder="contoh: 50"
+              required
+            />
           </div>
 
           <div className="flex items-center gap-2 mt-2">
@@ -244,15 +329,42 @@ export default function AdminEvents() {
                     {ev.location || "-"}
                   </p>
                   <p className="text-xs text-gray-600">
-                    <span className="font-medium">Tipe:</span>{" "}
-                    {ev.type || "-"}
+                    <span className="font-medium">Tipe:</span> {ev.type || "-"}
                   </p>
                   <p className="text-xs text-gray-600">
                     <span className="font-medium">Tanggal:</span>{" "}
-                    {ev.date
-                      ? new Date(ev.date).toLocaleDateString()
-                      : "-"}
+                    {ev.date ? new Date(ev.date).toLocaleDateString() : "-"}
                   </p>
+                  {typeof ev.maxVolunteers === "number" && (
+                    <p className="text-xs text-gray-600">
+                      <span className="font-medium">Maksimal pendaftar:</span>{" "}
+                      {ev.maxVolunteers} relawan
+                    </p>
+                  )}
+                </div>
+
+                <div>
+                  <h3 className="text-sm font-semibold mb-1">{ev.title}</h3>
+                  <p className="text-xs text-gray-600 mb-1">
+                    {ev.description || "-"}
+                  </p>
+                  <p className="text-xs text-gray-600">
+                    <span className="font-medium">Lokasi:</span>{" "}
+                    {ev.location || "-"}
+                  </p>
+                  <p className="text-xs text-gray-600">
+                    <span className="font-medium">Tipe:</span> {ev.type || "-"}
+                  </p>
+                  <p className="text-xs text-gray-600">
+                    <span className="font-medium">Tanggal:</span>{" "}
+                    {ev.date ? new Date(ev.date).toLocaleDateString() : "-"}
+                  </p>
+                  {typeof ev.maxVolunteers === "number" && (
+                    <p className="text-xs text-gray-600">
+                      <span className="font-medium">Maksimal pendaftar:</span>{" "}
+                      {ev.maxVolunteers} relawan
+                    </p>
+                  )}
                 </div>
 
                 <div className="mt-3 flex gap-2">

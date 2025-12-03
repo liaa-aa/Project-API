@@ -27,7 +27,7 @@ export default function Events() {
   }, []);
 
   return (
-    <div className="max-w-4xl mx-auto mt-8">
+    <div className="max-w-4xl pt-9 mx-auto mt-8 mb-9">
       <h1 className="text-2xl font-bold mb-4">Volunteer Events</h1>
 
       {error && (
@@ -56,6 +56,11 @@ export default function Events() {
               {ev.date && (
                 <p className="text-xs text-gray-500">
                   Tanggal: {new Date(ev.date).toLocaleDateString()}
+                </p>
+              )}
+              {typeof ev.maxVolunteers === "number" && (
+                <p className="text-xs text-gray-500">
+                  Maksimal relawan: {ev.maxVolunteers}
                 </p>
               )}
             </Link>

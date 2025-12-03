@@ -52,6 +52,7 @@ export const adminFetchEvents = async () => {
         location
         type
         date
+        maxVolunteers 
       }
     }
   `;
@@ -60,45 +61,187 @@ export const adminFetchEvents = async () => {
   return data?.getBencana || [];
 };
 
+
 // ===================
-// CRUD EVENT (REST: /bencana, hanya admin)
+// CRUD EVENT (GraphQL: createBencana, updateBencana, deleteBencana)
 // ===================
 
-// payload minimal: { title, description, location, type, date }
+// payload: { title, description, location, type, date, maxVolunteers }
 export const createEvent = async (payload) => {
-  const res = await fetch(`${API_BASE_URL}/bencana`, {
-    method: "POST",
-    headers: getAuthHeaders(),
-    body: JSON.stringify(payload),
-  });
+  const query = `
+    mutation CreateBencana(
+      $title: String!,
+      $description: String!,
+      $location: String!,
+      $type: String!,
+      $date: String!,
+      $maxVolunteers: Int!
+    ) {
+      createBencana(
+        title: $title,
+        description: $description,
+        location: $location,
+        type: $type,
+        date: $date,
+        maxVolunteers: $maxVolunteers
+      ) {
+        id
+        title
+        description
+        location
+        type
+        date
+        maxVolunteers
+      }
+    }
+  `;
 
-  const data = await res.json().catch(() => ({}));
+  const variables = {
+    title: payload.title,
+    description: payload.description,
+    location: payload.location,
+    type: payload.type,
+    date: payload.date,
+    maxVolunteers: payload.maxVolunteers,
+  };
 
-  if (!res.ok) {
-    throw new Error(data.message || "Gagal membuat event");
-  }
-
-  return data; // dokumen Bencana yang baru dibuat
+  const data = await graphqlRequest(query, variables);
+  return data?.createBencana;
 };
 
 export const updateEvent = async (id, payload) => {
-  const res = await fetch(`${API_BASE_URL}/bencana/${id}`, {
-    method: "PUT",
+  const query = `
+    mutation UpdateBencana(
+      $id: ID!,
+      $title: String!,
+      $description: String!,
+      $location: String!,
+      $type: String!,
+      $date: String!,
+      $maxVolunteers: Int!
+    ) {
+      updateBencana(
+        id: $id,
+        title: $title,
+        description: $description,
+        location: $location,
+        type: $type,
+        date: $date,
+        maxVolunteers: $maxVolunteers
+      ) {
+        id
+        title
+        description
+        location
+        type
+        date
+        maxVolunteers
+      }
+    }
+  `;
+
+  const variables = {
+    id,
+    title: payload.title,
+    description: payload.description,
+    location: payload.location,
+    type: payload.type,
+    date: payload.date,
+    maxVolunteers: payload.maxVolunteers,
+  };
+
+  const data = await graphqlRequest(query, variables);
+  return data?.updateBencana;
+};
+
+export const deleteEvent = async (id) => {
+  const query = `
+    mutation DeleteBencana($id: ID!) {
+      deleteBencana(id: $id) {
+        id
+      }
+    }
+  `;
+
+  const data = await graphqlRequest(query, { id });
+  return !!data?.deleteBencana;
+};
+
+
+// ===================
+// CRUD USER (REST: /users, hanya admin)
+// ===================
+
+// Ambil semua user
+export const adminFetchUsers = async () => {
+  const res = await fetch(`${API_BASE_URL}/users`, {
+    method: "GET",
     headers: getAuthHeaders(),
-    body: JSON.stringify(payload),
   });
 
   const data = await res.json().catch(() => ({}));
 
   if (!res.ok) {
-    throw new Error(data.message || "Gagal mengubah event");
+    throw new Error(data.message || "Gagal memuat daftar user");
   }
 
-  return data; // dokumen Bencana setelah update
+  // backend mengembalikan array dokumen User MongoDB
+  // [{ _id, name, email, role, ... }, ...]
+  return data;
 };
 
-export const deleteEvent = async (id) => {
-  const res = await fetch(`${API_BASE_URL}/bencana/${id}`, {
+// Tambah user baru (role default: relawan)
+export const adminCreateUser = async (payload) => {
+  // payload: { name, email, password }
+  const res = await fetch(`${API_BASE_URL}/users`, {
+    method: "POST",
+    headers: getAuthHeaders(),
+    body: JSON.stringify({
+      name: payload.name,
+      email: payload.email,
+      password: payload.password,
+    }),
+  });
+
+  const data = await res.json().catch(() => ({}));
+
+  if (!res.ok) {
+    throw new Error(data.message || "Gagal membuat user");
+  }
+
+  return data; // dokumen user yang baru dibuat
+};
+
+// Update user (bisa tanpa ganti password)
+export const adminUpdateUser = async (id, payload) => {
+  const body = {
+    name: payload.name,
+    email: payload.email,
+  };
+
+  // kalau password diisi, baru kirim ke backend
+  if (payload.password) {
+    body.password = payload.password;
+  }
+
+  const res = await fetch(`${API_BASE_URL}/users/${id}`, {
+    method: "PUT",
+    headers: getAuthHeaders(),
+    body: JSON.stringify(body),
+  });
+
+  const data = await res.json().catch(() => ({}));
+
+  if (!res.ok) {
+    throw new Error(data.message || "Gagal mengupdate user");
+  }
+
+  return data; // dokumen user yang sudah diupdate
+};
+
+// Hapus user
+export const adminDeleteUser = async (id) => {
+  const res = await fetch(`${API_BASE_URL}/users/${id}`, {
     method: "DELETE",
     headers: getAuthHeaders(),
   });
@@ -106,10 +249,10 @@ export const deleteEvent = async (id) => {
   const data = await res.json().catch(() => ({}));
 
   if (!res.ok) {
-    throw new Error(data.message || "Gagal menghapus event");
+    throw new Error(data.message || "Gagal menghapus user");
   }
 
-  return data; // boleh diabaikan di FE jika tidak perlu
+  return data; // { message: 'User deleted successfully' }
 };
 
 // ===================
