@@ -9,6 +9,7 @@ export const schema = buildSchema(`
         type: String!
         date: String!
         maxVolunteers: Int!
+        currentVolunteers: Int!
     }
 
     type RegisRelawan {

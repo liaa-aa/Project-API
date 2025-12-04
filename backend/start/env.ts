@@ -19,4 +19,7 @@ export default await Env.create(new URL('../', import.meta.url), {
   LOG_LEVEL: Env.schema.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']),
   MONGODB_URI: Env.schema.string(),
   MONGO_DB_NAME: Env.schema.string(),
+  GOOGLE_CLIENT_ID: Env.schema.string(),
+  WEATHER_API_KEY: Env.schema.string(),
+  WEATHER_API_BASE_URL: Env.schema.string({ format: 'url' }),
 })
