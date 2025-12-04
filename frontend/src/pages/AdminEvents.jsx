@@ -341,6 +341,16 @@ export default function AdminEvents() {
                       {ev.maxVolunteers} relawan
                     </p>
                   )}
+                  {typeof ev.currentVolunteers === "number" && (
+                    <p className="text-xs text-gray-600">
+                      <span className="font-medium">Jumlah pendaftar:</span>{" "}
+                      {ev.currentVolunteers}
+                      {typeof ev.maxVolunteers === "number" && (
+                        <> / {ev.maxVolunteers}</>
+                      )}{" "}
+                      relawan
+                    </p>
+                  )}
                 </div>
 
                 <div>

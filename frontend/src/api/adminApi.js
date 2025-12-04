@@ -40,7 +40,7 @@ const graphqlRequest = async (query, variables = {}) => {
 };
 
 // ===================
-// EVENT LIST UNTUK ADMIN (GraphQL: getBencana)
+// Ambil semua event (untuk admin)
 // ===================
 export const adminFetchEvents = async () => {
   const query = `
@@ -52,7 +52,8 @@ export const adminFetchEvents = async () => {
         location
         type
         date
-        maxVolunteers 
+        maxVolunteers
+        currentVolunteers  
       }
     }
   `;
@@ -60,6 +61,7 @@ export const adminFetchEvents = async () => {
   const data = await graphqlRequest(query);
   return data?.getBencana || [];
 };
+
 
 
 // ===================

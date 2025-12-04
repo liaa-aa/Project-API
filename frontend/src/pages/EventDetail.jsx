@@ -24,6 +24,17 @@ export default function EventDetail() {
 
   const isLoggedIn = !!localStorage.getItem("token");
 
+  // ➕➕➕ TAMBAHAN: helper untuk cek apakah event sudah penuh
+  const isEventFull = (ev) => {
+    if (!ev) return false;
+    if (typeof ev.maxVolunteers !== "number") return false;
+    if (typeof ev.currentVolunteers !== "number") return false;
+    return ev.currentVolunteers >= ev.maxVolunteers;
+  };
+
+  // nilai boolean yang dipakai di JSX
+  const eventFull = isEventFull(event);
+
   // Ambil detail event
   useEffect(() => {
     const fetchEvent = async () => {
@@ -120,6 +131,35 @@ export default function EventDetail() {
     );
   };
 
+  // ➕➕➕ TAMBAHAN: badge kapasitas event (penuh / tersedia)
+  const renderCapacityBadge = () => {
+    if (!event) return null;
+    if (
+      typeof event.maxVolunteers !== "number" ||
+      typeof event.currentVolunteers !== "number"
+    ) {
+      return null;
+    }
+
+    const full = isEventFull(event);
+    const base =
+      "inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold";
+    const color = full
+      ? "bg-red-100 text-red-800"
+      : "bg-green-100 text-green-800";
+
+    return (
+      <span className={`${base} ${color}`}>
+        {full ? "Event penuh" : "Slot tersedia"}
+        {!full && (
+          <span className="ml-1">
+            ({event.maxVolunteers - event.currentVolunteers} slot tersisa)
+          </span>
+        )}
+      </span>
+    );
+  };
+
   return (
     <div className="max-w-xl mx-auto mt-8 bg-white shadow p-6 rounded">
       {loadingEvent ? (
@@ -132,7 +172,13 @@ export default function EventDetail() {
         <p className="text-gray-600">Event tidak ditemukan.</p>
       ) : (
         <>
-          <h1 className="text-2xl font-bold mb-2">{event.title}</h1>
+          <div className="flex items-start justify-between gap-3 mb-2">
+            <h1 className="text-2xl font-bold">{event.title}</h1>
+
+            {/* ➕➕➕ TAMBAHAN: badge kapasitas di sebelah judul */}
+            {renderCapacityBadge()}
+          </div>
+
           <p className="text-gray-700 mb-1">
             Lokasi: <span className="font-semibold">{event.location}</span>
           </p>
@@ -153,6 +199,21 @@ export default function EventDetail() {
               <span className="font-semibold">{event.maxVolunteers}</span>
             </p>
           )}
+
+          {/* ➕➕➕ TAMBAHAN: jumlah pendaftar dari BE */}
+          {typeof event.currentVolunteers === "number" && (
+            <p className="text-gray-700 mb-1">
+              Jumlah pendaftar:{" "}
+              <span className="font-semibold">
+                {event.currentVolunteers}
+                {typeof event.maxVolunteers === "number" && (
+                  <> / {event.maxVolunteers}</>
+                )}{" "}
+                relawan
+              </span>
+            </p>
+          )}
+
           <p className="text-gray-600 mt-3">{event.description}</p>
 
           {/* status & tombol aksi */}
@@ -179,10 +240,18 @@ export default function EventDetail() {
                 {!myRegistration ? (
                   <button
                     onClick={handleJoin}
-                    disabled={actionLoading}
-                    className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 disabled:opacity-60 text-sm"
+                    disabled={actionLoading || eventFull} // 🔁 DIGANTI: ikut nonaktif kalau penuh
+                    className={`text-white px-4 py-2 rounded disabled:opacity-60 text-sm ${
+                      eventFull
+                        ? "bg-gray-400 cursor-not-allowed"
+                        : "bg-blue-600 hover:bg-blue-700"
+                    }`}
                   >
-                    {actionLoading ? "Memproses..." : "Daftar sebagai relawan"}
+                    {eventFull
+                      ? "Event penuh"
+                      : actionLoading
+                      ? "Memproses..."
+                      : "Daftar sebagai relawan"}
                   </button>
                 ) : (
                   <>
