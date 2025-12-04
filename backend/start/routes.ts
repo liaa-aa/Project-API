@@ -16,8 +16,8 @@ router.post('/login', '#controllers/authController.login')
 router.post('/google-login', '#controllers/authController.googleLogin')
 
 // Bencana routes (public)
-router.get('/bencana', '#controllers/bencanaController.index')
-router.get('/bencana/:id', '#controllers/bencanaController.show')
+// router.get('/bencana', '#controllers/bencanaController.index')
+// router.get('/bencana/:id', '#controllers/bencanaController.show')
 
 // Bencana routes (protected)
 // router
@@ -42,7 +42,7 @@ router
 
 // Public user routes
 router.get('/users/:id', '#controllers/usersController.show')
-router.put('/bencana/:id', '#controllers/bencanaController.update')
+// router.put('/bencana/:id', '#controllers/bencanaController.update')
 
 // GraphQL route (protected)
 router
@@ -52,21 +52,21 @@ router
   .use(middleware.auth())
 
 // registrasi relawan (harus login dulu)
-router
-  .group(() => {
-    router.post('/bencana/:id/join', '#controllers/regisRelawanController.join')
-    router.get('/me/registrations', '#controllers/regisRelawanController.myRegistrations')
-  })
-  .use(middleware.auth())
+// router
+//   .group(() => {
+//     router.post('/bencana/:id/join', '#controllers/regisRelawanController.join')
+//     router.get('/me/registrations', '#controllers/regisRelawanController.myRegistrations')
+//   })
+//   .use(middleware.auth())
 
 // admin melihat semua pendaftar relawan dan mengubah status pendaftaran
-router
-  .group(() => {
-    router.get('/bencana/:id/relawan', '#controllers/regisRelawanController.bencanaVolunteers')
-    router.put(
-      '/registrations/:id/status',
-      '#controllers/regisRelawanController.updateRegistrationStatus'
-    )
-  })
-  .use(middleware.auth())
-  .use(middleware.admin())
+// router
+//   .group(() => {
+//     router.get('/bencana/:id/relawan', '#controllers/regisRelawanController.bencanaVolunteers')
+//     router.put(
+//       '/registrations/:id/status',
+//       '#controllers/regisRelawanController.updateRegistrationStatus'
+//     )
+//   })
+//   .use(middleware.auth())
+//   .use(middleware.admin())
