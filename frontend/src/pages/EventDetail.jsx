@@ -24,7 +24,7 @@ export default function EventDetail() {
 
   const isLoggedIn = !!localStorage.getItem("token");
 
-  // ➕➕➕ TAMBAHAN: helper untuk cek apakah event sudah penuh
+  // ==== HELPER: cek apakah event sudah penuh ====
   const isEventFull = (ev) => {
     if (!ev) return false;
     if (typeof ev.maxVolunteers !== "number") return false;
@@ -32,8 +32,24 @@ export default function EventDetail() {
     return ev.currentVolunteers >= ev.maxVolunteers;
   };
 
-  // nilai boolean yang dipakai di JSX
   const eventFull = isEventFull(event);
+
+  // ==== HELPER: update jumlah volunteer di state event ====
+  const updateVolunteerCount = (delta) => {
+    setEvent((prev) => {
+      if (!prev) return prev;
+      const current =
+        typeof prev.currentVolunteers === "number"
+          ? prev.currentVolunteers
+          : 0;
+      let next = current + delta;
+      if (next < 0) next = 0;
+      return {
+        ...prev,
+        currentVolunteers: next,
+      };
+    });
+  };
 
   // Ambil detail event
   useEffect(() => {
@@ -87,8 +103,12 @@ export default function EventDetail() {
     setActionLoading(true);
     try {
       const res = await joinEvent(id);
+      // asumsi BE mengembalikan { data: reg, message: "..." }
       setMyRegistration(res.data || null);
       setInfo(res.message || "Berhasil mendaftar sebagai relawan");
+
+      // === PENTING: naikin jumlah pendaftar di FE juga ===
+      updateVolunteerCount(1);
     } catch (err) {
       setError(err.message || "Gagal mendaftar");
     } finally {
@@ -104,6 +124,9 @@ export default function EventDetail() {
       const res = await cancelEventRegistration(id);
       setMyRegistration(null);
       setInfo(res.message || "Pendaftaran berhasil dibatalkan");
+
+      // === PENTING: turunkan jumlah pendaftar di FE juga ===
+      updateVolunteerCount(-1);
     } catch (err) {
       setError(
         err.message ||
@@ -131,7 +154,7 @@ export default function EventDetail() {
     );
   };
 
-  // ➕➕➕ TAMBAHAN: badge kapasitas event (penuh / tersedia)
+  // Badge kapasitas berdasarkan jumlah volunteer
   const renderCapacityBadge = () => {
     if (!event) return null;
     if (
@@ -148,9 +171,17 @@ export default function EventDetail() {
       ? "bg-red-100 text-red-800"
       : "bg-green-100 text-green-800";
 
+    // Kalau penuh tapi user sudah terdaftar, info sedikit beda
+    const userHasSlot =
+      !!myRegistration && (myRegistration.status === "approved" || myRegistration.status === "pending");
+
     return (
       <span className={`${base} ${color}`}>
-        {full ? "Event penuh" : "Slot tersedia"}
+        {full
+          ? userHasSlot
+            ? "Event penuh (kamu sudah terdaftar)"
+            : "Event penuh"
+          : "Slot tersedia"}
         {!full && (
           <span className="ml-1">
             ({event.maxVolunteers - event.currentVolunteers} slot tersisa)
@@ -172,10 +203,9 @@ export default function EventDetail() {
         <p className="text-gray-600">Event tidak ditemukan.</p>
       ) : (
         <>
+          {/* Judul + badge kapasitas */}
           <div className="flex items-start justify-between gap-3 mb-2">
             <h1 className="text-2xl font-bold">{event.title}</h1>
-
-            {/* ➕➕➕ TAMBAHAN: badge kapasitas di sebelah judul */}
             {renderCapacityBadge()}
           </div>
 
@@ -200,7 +230,7 @@ export default function EventDetail() {
             </p>
           )}
 
-          {/* ➕➕➕ TAMBAHAN: jumlah pendaftar dari BE */}
+          {/* Jumlah pendaftar dari BE */}
           {typeof event.currentVolunteers === "number" && (
             <p className="text-gray-700 mb-1">
               Jumlah pendaftar:{" "}
@@ -240,7 +270,7 @@ export default function EventDetail() {
                 {!myRegistration ? (
                   <button
                     onClick={handleJoin}
-                    disabled={actionLoading || eventFull} // 🔁 DIGANTI: ikut nonaktif kalau penuh
+                    disabled={actionLoading || eventFull}
                     className={`text-white px-4 py-2 rounded disabled:opacity-60 text-sm ${
                       eventFull
                         ? "bg-gray-400 cursor-not-allowed"
@@ -254,15 +284,15 @@ export default function EventDetail() {
                       : "Daftar sebagai relawan"}
                   </button>
                 ) : (
-                  <>
-                    <button
-                      onClick={handleCancel}
-                      disabled={actionLoading}
-                      className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700 disabled:opacity-60 text-sm"
-                    >
-                      {actionLoading ? "Memproses..." : "Batalkan pendaftaran"}
-                    </button>
-                  </>
+                  <button
+                    onClick={handleCancel}
+                    disabled={actionLoading}
+                    className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700 disabled:opacity-60 text-sm"
+                  >
+                    {actionLoading
+                      ? "Memproses..."
+                      : "Batalkan pendaftaran"}
+                  </button>
                 )}
               </div>
             )}
