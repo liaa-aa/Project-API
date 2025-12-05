@@ -36,7 +36,7 @@ export default function Register() {
   };
 
   return (
-    <div className="max-w-md mx-auto bg-white shadow p-6 rounded mt-8">
+    <div className="max-w-md mx-auto bg-white shadow p-6 m-9 rounded mt-8">
       <h2 className="text-2xl font-bold mb-4 text-center">
         Daftar dengan Email
       </h2>

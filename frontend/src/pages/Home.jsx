@@ -3,7 +3,7 @@ import heroImage from "../assets/hero.png";
 
 const Home = () => {
   return (
-    <div className="pt-9 bg-slate-50">
+    <div className="pt-0 pb-15 bg-slate-50">
       {/* ===== HERO SECTION (lebih modern) ===== */}
       <section className="relative max-w-6xl mx-auto mt-4 rounded-2xl bg-gradient-to-r from-blue-600 via-sky-500 to-cyan-400 text-white shadow-md overflow-hidden px-6 py-10 md:px-10 md:py-14">
         {/* dekorasi blur */}

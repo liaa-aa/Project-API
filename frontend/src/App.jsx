@@ -25,7 +25,7 @@ function App() {
     <div className="min-h-screen flex flex-col bg-slate-50">
       <Navbar />
 
-      <main className="flex-1 pt-0">
+      <main className="flex-1 pt-11">
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/events" element={<Events />} />

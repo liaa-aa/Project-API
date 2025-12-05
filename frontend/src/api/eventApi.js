@@ -15,7 +15,7 @@ const getAuthHeaders = () => {
     : { "Content-Type": "application/json" };
 };
 
-// Helper GraphQL (untuk endpoint yang butuh login)
+// Helper GraphQL (untuk endpoint yang butuh / tidak butuh login)
 const graphqlRequest = async (query, variables = {}) => {
   const res = await fetch(`${API_BASE_URL}/graphql`, {
     method: "POST",
@@ -32,31 +32,50 @@ const graphqlRequest = async (query, variables = {}) => {
 };
 
 // ===============================
-//  PUBLIC EVENT ENDPOINTS (REST)
+//  PUBLIC EVENT (BENCANA) – GraphQL
 // ===============================
 
-// Ambil semua event — PUBLIC
+// Ambil semua event — PUBLIC (GraphQL: getBencana)
 export const getEvents = async () => {
-  const res = await fetch(`${API_BASE_URL}/bencana`, {
-    method: "GET",
-    headers: { "Content-Type": "application/json" },
-  });
+  const query = `
+    query GetBencana {
+      getBencana {
+        id
+        title
+        description
+        location
+        type
+        date
+        maxVolunteers
+        currentVolunteers
+      }
+    }
+  `;
 
-  if (!res.ok) throw new Error("Gagal mengambil data event");
-
-  return await res.json();
+  const data = await graphqlRequest(query);
+  // backend mengembalikan { data: { getBencana: [...] } }
+  return data?.getBencana || [];
 };
 
-// Ambil detail event — PUBLIC
+// Ambil detail event — PUBLIC (GraphQL: getBencanaById)
 export const getEventById = async (id) => {
-  const res = await fetch(`${API_BASE_URL}/bencana/${id}`, {
-    method: "GET",
-    headers: { "Content-Type": "application/json" },
-  });
+  const query = `
+    query GetBencanaById($id: ID!) {
+      getBencanaById(id: $id) {
+        id
+        title
+        description
+        location
+        type
+        date
+        maxVolunteers
+        currentVolunteers
+      }
+    }
+  `;
 
-  if (!res.ok) throw new Error("Gagal mengambil detail event");
-
-  return await res.json();
+  const data = await graphqlRequest(query, { id });
+  return data?.getBencanaById || null;
 };
 
 // ===============================
@@ -95,6 +114,7 @@ export const getMyRegistrations = async () => {
         bencanaId
         status
         createdAt
+        updatedAt
       }
     }
   `;
@@ -104,23 +124,25 @@ export const getMyRegistrations = async () => {
 };
 
 // Batalkan pendaftaran relawan — login wajib
-export const cancelEventRegistration = async (registrationId) => {
+// (schema BE: cancelJoinBencana(bencanaId: ID!): RegisRelawan)
+export const cancelEventRegistration = async (bencanaId) => {
   const query = `
-    mutation CancelRegistration($registrationId: ID!) {
-      cancelRegistration(registrationId: $registrationId) {
+    mutation CancelJoin($bencanaId: ID!) {
+      cancelJoinBencana(bencanaId: $bencanaId) {
         id
         userId
         bencanaId
         status
+        createdAt
         updatedAt
       }
     }
   `;
 
-  const data = await graphqlRequest(query, { registrationId });
+  const data = await graphqlRequest(query, { bencanaId });
 
   return {
     message: "Pendaftaran berhasil dibatalkan",
-    data: data?.cancelRegistration,
+    data: data?.cancelJoinBencana,
   };
 };

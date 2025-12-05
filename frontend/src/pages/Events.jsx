@@ -42,29 +42,76 @@ export default function Events() {
         <p className="text-gray-600">Belum ada event.</p>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {events.map((ev) => (
-            <Link
-              key={ev._id || ev.id}
-              to={`/events/${ev._id || ev.id}`}
-              className="border p-4 rounded shadow hover:shadow-md transition"
-            >
-              <h2 className="font-bold text-lg mb-1">{ev.title}</h2>
-              <p className="text-gray-600">{ev.location}</p>
-              <p className="text-xs text-gray-500 mt-1">
-                Jenis: {ev.type || "-"}
-              </p>
-              {ev.date && (
-                <p className="text-xs text-gray-500">
-                  Tanggal: {new Date(ev.date).toLocaleDateString()}
+          {events.map((ev) => {
+            const hasMax =
+              typeof ev.maxVolunteers === "number" && ev.maxVolunteers > 0;
+            const hasCurrent =
+              typeof ev.currentVolunteers === "number" &&
+              ev.currentVolunteers >= 0;
+
+            const isFull =
+              hasMax && hasCurrent && ev.currentVolunteers >= ev.maxVolunteers;
+
+            const remaining =
+              hasMax && hasCurrent
+                ? ev.maxVolunteers - ev.currentVolunteers
+                : null;
+
+            return (
+              <Link
+                key={ev.id || ev._id}
+                to={`/events/${ev.id || ev._id}`}
+                className="border p-4 rounded shadow hover:shadow-md transition bg-white"
+              >
+                <h2 className="font-bold text-lg mb-1">{ev.title}</h2>
+                <p className="text-gray-600">{ev.location}</p>
+
+                <p className="text-xs text-gray-500 mt-1">
+                  Jenis: {ev.type || "-"}
                 </p>
-              )}
-              {typeof ev.maxVolunteers === "number" && (
-                <p className="text-xs text-gray-500">
-                  Maksimal relawan: {ev.maxVolunteers}
-                </p>
-              )}
-            </Link>
-          ))}
+
+                {ev.date && (
+                  <p className="text-xs text-gray-500">
+                    Tanggal:{" "}
+                    {new Date(ev.date).toLocaleDateString(undefined, {
+                      day: "2-digit",
+                      month: "short",
+                      year: "numeric",
+                    })}
+                  </p>
+                )}
+
+                {hasMax && (
+                  <p className="text-xs text-gray-500">
+                    Maksimal relawan:{" "}
+                    <span className="font-semibold">{ev.maxVolunteers}</span>
+                  </p>
+                )}
+
+                {hasCurrent && (
+                  <p className="text-xs text-gray-700 mt-1">
+                    Pendaftar:{" "}
+                    <span className="font-semibold">
+                      {ev.currentVolunteers}
+                      {hasMax && <> / {ev.maxVolunteers}</>} relawan
+                    </span>
+                  </p>
+                )}
+
+                {hasMax && hasCurrent && (
+                  <p
+                    className={`text-xs mt-1 ${
+                      isFull ? "text-red-600" : "text-green-600"
+                    }`}
+                  >
+                    {isFull
+                      ? "Event penuh"
+                      : `Slot tersisa: ${remaining} relawan`}
+                  </p>
+                )}
+              </Link>
+            );
+          })}
         </div>
       )}
     </div>

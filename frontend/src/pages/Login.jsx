@@ -1,8 +1,11 @@
 // src/pages/Login.jsx
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { login } from "../api/authApi"; // SESUAIKAN path-nya kalau beda
+import { login, googleLogin } from "../api/authApi"; // tambahkan googleLogin
+
+// ambil client id dari .env (sudah ada di project-mu)
+const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 
 const Login = () => {
   const navigate = useNavigate();
@@ -12,6 +15,7 @@ const Login = () => {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
+  // login biasa (email + password)
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
@@ -43,6 +47,74 @@ const Login = () => {
     }
   };
 
+  // callback ketika Google mengembalikan credential (idToken)
+  const handleGoogleResponse = async (response) => {
+    try {
+      setError("");
+      setLoading(true);
+
+      const idToken = response?.credential;
+      if (!idToken) {
+        setError("Token Google tidak ditemukan");
+        return;
+      }
+
+      // panggil API /google-login di backend
+      const data = await googleLogin(idToken); // { message, token, user }
+
+      // simpan ke localStorage (sama seperti login biasa)
+      localStorage.setItem("token", data.token);
+      localStorage.setItem("user", JSON.stringify(data.user));
+
+      // redirect sesuai role
+      if (data.user.role === "admin") {
+        navigate("/admin/volunteers");
+      } else {
+        navigate("/");
+      }
+    } catch (err) {
+      console.error("Google login error FE:", err);
+      setError(err?.message || "Login Google gagal");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // inisialisasi Google Identity Services & render tombol
+  useEffect(() => {
+    if (!GOOGLE_CLIENT_ID) {
+      console.warn("VITE_GOOGLE_CLIENT_ID belum di-set di .env frontend");
+      return;
+    }
+
+    // pastikan script google sudah loaded
+    if (
+      !window.google ||
+      !window.google.accounts ||
+      !window.google.accounts.id
+    ) {
+      console.warn("Google Identity script belum siap");
+      return;
+    }
+
+    // init
+    window.google.accounts.id.initialize({
+      client_id: GOOGLE_CLIENT_ID,
+      callback: handleGoogleResponse,
+    });
+
+    // render button ke dalam div dengan id 'googleSignInDiv'
+    const btnDiv = document.getElementById("googleSignInDiv");
+    if (btnDiv) {
+      window.google.accounts.id.renderButton(btnDiv, {
+        theme: "outline",
+        size: "large",
+        width: "100%",
+        shape: "pill",
+      });
+    }
+  }, []);
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
       <div className="w-full max-w-md bg-white rounded-lg shadow p-6">
@@ -54,6 +126,19 @@ const Login = () => {
           </div>
         )}
 
+        {/* tombol Login dengan Google */}
+        <div id="googleSignInDiv" className="mb-4 flex justify-center" />
+
+        {/* pemisah / divider */}
+        <div className="flex items-center my-4">
+          <div className="grow border-t border-gray-200" />
+          <span className="px-2 text-xs text-gray-500">
+            atau login dengan email
+          </span>
+          <div className="grow border-t border-gray-200" />
+        </div>
+
+        {/* form login biasa */}
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-sm mb-1">Email</label>
