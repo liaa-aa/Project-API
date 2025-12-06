@@ -8,7 +8,7 @@ export const schema = buildSchema(`
         location: String!
         type: String!
         date: String!
-        maxVolunteers: Int!
+        maxVolunteers: Int
         currentVolunteers: Int!
     }
 
