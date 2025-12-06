@@ -1,0 +1,520 @@
+openapi: 3.0.0
+info:
+  title: API VolenteerEvent - Sistem Relawan Bencana
+  version: 1.0.0
+  description: |
+    Dokumentasi REST API untuk aplikasi VolenteerEvent (sistem relawan bencana).
+    Disusun menggunakan OpenAPI 3.0 (Swagger).
+
+servers:
+  - url: http://localhost:3333
+    description: Server lokal pengembangan
+
+paths:
+  /register:
+    post:
+      tags:
+        - Auth
+      summary: Registrasi user baru
+      description: Membuat akun user baru di sistem.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '201':
+          description: Registrasi berhasil
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegisterResponse'
+        '400':
+          description: Email sudah terdaftar atau data tidak valid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Terjadi kesalahan server
+
+  /login:
+    post:
+      tags:
+        - Auth
+      summary: Login user
+      description: Melakukan autentikasi user dan mengembalikan token JWT.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Login berhasil
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '401':
+          description: Email atau password salah / akun tidak bisa login dengan password
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Terjadi kesalahan server
+
+  /google-login:
+    post:
+      tags:
+        - Auth
+      summary: Login menggunakan akun Google
+      description: >
+        Melakukan login menggunakan ID token Google. Backend akan memverifikasi token,
+        menghubungkan ke user yang sudah ada atau membuat user baru.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - idToken
+              properties:
+                idToken:
+                  type: string
+                  description: ID token dari Google OAuth
+                  example: ya29.a0AfH6SMBExampleGoogleToken
+      responses:
+        '200':
+          description: Login Google berhasil
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '400':
+          description: Token Google tidak valid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Terjadi kesalahan server
+
+  /users:
+    get:
+      tags:
+        - Users
+      summary: Mendapatkan daftar semua user (admin)
+      description: >
+        Mengambil seluruh data user. Hanya bisa diakses oleh admin
+        (menggunakan middleware auth + admin).
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Berhasil mengambil daftar user
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/User'
+        '401':
+          description: Tidak terautentikasi (token tidak ada/tidak valid)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Tidak punya hak akses (bukan admin)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    post:
+      tags:
+        - Users
+      summary: Membuat user baru (admin)
+      description: >
+        Membuat user baru dari sisi admin.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserCreateRequest'
+      responses:
+        '201':
+          description: User berhasil dibuat
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          description: Data tidak valid / email sudah digunakan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Tidak terautentikasi
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Tidak punya hak akses
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /users/{id}:
+    get:
+      tags:
+        - Users
+      summary: Mendapatkan detail user berdasarkan ID
+      description: >
+        Mengambil detail user berdasarkan ID. (Pada routes saat ini, endpoint ini tidak
+        berada dalam group middleware auth/admin sehingga bersifat publik.)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+          description: ID user (MongoDB ObjectId)
+      responses:
+        '200':
+          description: Detail user berhasil diambil
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '404':
+          description: User tidak ditemukan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    put:
+      tags:
+        - Users
+      summary: Update data user berdasarkan ID (admin)
+      description: Mengubah data user (misalnya name, email, password) berdasarkan ID.
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+          description: ID user (MongoDB ObjectId)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserUpdateRequest'
+      responses:
+        '200':
+          description: User berhasil diupdate
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '401':
+          description: Tidak terautentikasi
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Tidak punya hak akses
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: User tidak ditemukan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    delete:
+      tags:
+        - Users
+      summary: Menghapus user berdasarkan ID (admin)
+      description: Menghapus user dari sistem.
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+          description: ID user (MongoDB ObjectId)
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: User berhasil dihapus
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: User deleted successfully
+        '401':
+          description: Tidak terautentikasi
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Tidak punya hak akses
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: User tidak ditemukan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /graphql:
+    post:
+      tags:
+        - GraphQL
+      summary: Endpoint GraphQL (bencana & relawan)
+      description: >
+        Endpoint tunggal untuk seluruh operasi GraphQL:
+        query dan mutation terkait Bencana dan Relawan.
+        Endpoint ini dilindungi middleware auth (butuh JWT).
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                query:
+                  type: string
+                  description: String query GraphQL
+                  example: |
+                    query {
+                      getBencana {
+                        id
+                        title
+                        location
+                        type
+                        date
+                        maxVolunteers
+                        currentVolunteers
+                      }
+                    }
+                variables:
+                  type: object
+                  nullable: true
+                  example: {}
+                operationName:
+                  type: string
+                  nullable: true
+                  example: getBencana
+      responses:
+        '200':
+          description: Hasil eksekusi GraphQL
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    description: Data yang dikembalikan oleh GraphQL
+                  errors:
+                    type: array
+                    nullable: true
+                    items:
+                      type: object
+        '401':
+          description: Tidak terautentikasi
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    User:
+      type: object
+      description: Representasi user dari database
+      properties:
+        _id:
+          type: string
+          example: 6650d9c3f8a0c71234567890
+        name:
+          type: string
+          example: Budi
+        email:
+          type: string
+          format: email
+          example: budi@mail.com
+        role:
+          type: string
+          example: admin
+        createdAt:
+          type: string
+          format: date-time
+          example: 2024-06-01T12:00:00Z
+        updatedAt:
+          type: string
+          format: date-time
+          example: 2024-06-02T08:30:00Z
+
+    PublicUser:
+      type: object
+      description: Representasi user yang dikirim ke client pada response auth
+      properties:
+        id:
+          type: string
+          example: 6650d9c3f8a0c71234567890
+        name:
+          type: string
+          example: Budi
+        email:
+          type: string
+          format: email
+          example: budi@mail.com
+        role:
+          type: string
+          example: admin
+
+    RegisterRequest:
+      type: object
+      required:
+        - name
+        - email
+        - password
+      properties:
+        name:
+          type: string
+          example: Budi
+        email:
+          type: string
+          format: email
+          example: budi@mail.com
+        password:
+          type: string
+          format: password
+          example: rahasia123
+
+    RegisterResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: User berhasil dibuat
+        user:
+          type: object
+          properties:
+            id:
+              type: string
+              example: 6650d9c3f8a0c71234567890
+            name:
+              type: string
+              example: Budi
+            email:
+              type: string
+              format: email
+              example: budi@mail.com
+
+    LoginRequest:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+          example: budi@mail.com
+        password:
+          type: string
+          format: password
+          example: rahasia123
+
+    LoginResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: Login berhasil
+        token:
+          type: string
+          description: JSON Web Token
+          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        user:
+          $ref: '#/components/schemas/PublicUser'
+
+    UserCreateRequest:
+      type: object
+      required:
+        - name
+        - email
+        - password
+      properties:
+        name:
+          type: string
+          example: Ani
+        email:
+          type: string
+          format: email
+          example: ani@mail.com
+        password:
+          type: string
+          format: password
+          example: password123
+
+    UserUpdateRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          example: Ani Update
+        email:
+          type: string
+          format: email
+          example: ani_update@mail.com
+        password:
+          type: string
+          format: password
+          example: newpassword123
+
+    ErrorResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: Terjadi kesalahan server
