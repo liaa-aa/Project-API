@@ -33,4 +33,3 @@ router
   .group(() => {
     router.post('/graphql', '#controllers/graphqlController.handle')
   })
-  .use(middleware.auth())

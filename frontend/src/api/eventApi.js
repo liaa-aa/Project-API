@@ -46,7 +46,6 @@ export const getEvents = async () => {
         location
         type
         date
-        maxVolunteers
         currentVolunteers
       }
     }
@@ -68,7 +67,6 @@ export const getEventById = async (id) => {
         location
         type
         date
-        maxVolunteers
         currentVolunteers
       }
     }
