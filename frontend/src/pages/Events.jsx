@@ -15,7 +15,7 @@ export default function Events() {
 
       try {
         const data = await getEvents();
-        setEvents(data);
+        setEvents(Array.isArray(data) ? data : []);
       } catch (err) {
         setError(err.message || "Gagal memuat event");
       } finally {
@@ -43,24 +43,20 @@ export default function Events() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {events.map((ev) => {
-            const hasMax =
-              typeof ev.maxVolunteers === "number" && ev.maxVolunteers > 0;
-            const hasCurrent =
-              typeof ev.currentVolunteers === "number" &&
-              ev.currentVolunteers >= 0;
+            const max = Number(ev.maxVolunteers);
+            const current = Number(ev.currentVolunteers);
 
-            const isFull =
-              hasMax && hasCurrent && ev.currentVolunteers >= ev.maxVolunteers;
+            const hasMax = Number.isFinite(max) && max > 0;
+            const hasCurrent = Number.isFinite(current) && current >= 0;
 
-            const remaining =
-              hasMax && hasCurrent
-                ? ev.maxVolunteers - ev.currentVolunteers
-                : null;
+            const isFull = hasMax && hasCurrent && current >= max;
+
+            const remaining = hasMax && hasCurrent ? max - current : null;
 
             return (
               <Link
-                key={ev.id || ev._id}
-                to={`/events/${ev.id || ev._id}`}
+                key={ev._id || ev.id}
+                to={`/events/${ev._id || ev.id}`}
                 className="border p-4 rounded shadow hover:shadow-md transition bg-white"
               >
                 <h2 className="font-bold text-lg mb-1">{ev.title}</h2>
@@ -84,7 +80,7 @@ export default function Events() {
                 {hasMax && (
                   <p className="text-xs text-gray-500">
                     Maksimal relawan:{" "}
-                    <span className="font-semibold">{ev.maxVolunteers}</span>
+                    <span className="font-semibold">{max}</span>
                   </p>
                 )}
 
@@ -92,8 +88,8 @@ export default function Events() {
                   <p className="text-xs text-gray-700 mt-1">
                     Pendaftar:{" "}
                     <span className="font-semibold">
-                      {ev.currentVolunteers}
-                      {hasMax && <> / {ev.maxVolunteers}</>} relawan
+                      {current}
+                      {hasMax && <> / {max}</>} relawan
                     </span>
                   </p>
                 )}

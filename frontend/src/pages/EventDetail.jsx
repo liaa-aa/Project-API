@@ -27,9 +27,10 @@ export default function EventDetail() {
   // ==== HELPER: cek apakah event sudah penuh ====
   const isEventFull = (ev) => {
     if (!ev) return false;
-    if (typeof ev.maxVolunteers !== "number") return false;
-    if (typeof ev.currentVolunteers !== "number") return false;
-    return ev.currentVolunteers >= ev.maxVolunteers;
+    const max = Number(ev.maxVolunteers);
+    const current = Number(ev.currentVolunteers);
+    if (!Number.isFinite(max) || !Number.isFinite(current)) return false;
+    return current >= max;
   };
 
   const eventFull = isEventFull(event);
@@ -38,10 +39,9 @@ export default function EventDetail() {
   const updateVolunteerCount = (delta) => {
     setEvent((prev) => {
       if (!prev) return prev;
-      const current =
-        typeof prev.currentVolunteers === "number"
-          ? prev.currentVolunteers
-          : 0;
+      const current = Number.isFinite(Number(prev.currentVolunteers))
+        ? Number(prev.currentVolunteers)
+        : 0;
       let next = current + delta;
       if (next < 0) next = 0;
       return {
@@ -77,9 +77,7 @@ export default function EventDetail() {
       setError("");
       try {
         const regs = await getMyRegistrations();
-        // cari registrasi dengan bencana yang sesuai
         const found = regs.find((r) => {
-          // bisa berupa ObjectId atau objek bencana yang di-populate
           const bencanaId =
             (typeof r.bencana === "string" ? r.bencana : r.bencana?._id) ||
             r.bencanaId;
@@ -87,7 +85,6 @@ export default function EventDetail() {
         });
         setMyRegistration(found || null);
       } catch (err) {
-        // kalau endpoint my-registrations belum ada / error, jangan matikan halaman
         console.error(err);
       } finally {
         setLoadingRegistration(false);
@@ -103,11 +100,8 @@ export default function EventDetail() {
     setActionLoading(true);
     try {
       const res = await joinEvent(id);
-      // asumsi BE mengembalikan { data: reg, message: "..." }
       setMyRegistration(res.data || null);
       setInfo(res.message || "Berhasil mendaftar sebagai relawan");
-
-      // === PENTING: naikin jumlah pendaftar di FE juga ===
       updateVolunteerCount(1);
     } catch (err) {
       setError(err.message || "Gagal mendaftar");
@@ -124,8 +118,6 @@ export default function EventDetail() {
       const res = await cancelEventRegistration(id);
       setMyRegistration(null);
       setInfo(res.message || "Pendaftaran berhasil dibatalkan");
-
-      // === PENTING: turunkan jumlah pendaftar di FE juga ===
       updateVolunteerCount(-1);
     } catch (err) {
       setError(
@@ -157,23 +149,25 @@ export default function EventDetail() {
   // Badge kapasitas berdasarkan jumlah volunteer
   const renderCapacityBadge = () => {
     if (!event) return null;
-    if (
-      typeof event.maxVolunteers !== "number" ||
-      typeof event.currentVolunteers !== "number"
-    ) {
+
+    const max = Number(event.maxVolunteers);
+    const current = Number(event.currentVolunteers);
+
+    if (!Number.isFinite(max) || !Number.isFinite(current)) {
       return null;
     }
 
-    const full = isEventFull(event);
+    const full = current >= max;
     const base =
       "inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold";
     const color = full
       ? "bg-red-100 text-red-800"
       : "bg-green-100 text-green-800";
 
-    // Kalau penuh tapi user sudah terdaftar, info sedikit beda
     const userHasSlot =
-      !!myRegistration && (myRegistration.status === "approved" || myRegistration.status === "pending");
+      !!myRegistration &&
+      (myRegistration.status === "approved" ||
+        myRegistration.status === "pending");
 
     return (
       <span className={`${base} ${color}`}>
@@ -182,14 +176,20 @@ export default function EventDetail() {
             ? "Event penuh (kamu sudah terdaftar)"
             : "Event penuh"
           : "Slot tersedia"}
-        {!full && (
-          <span className="ml-1">
-            ({event.maxVolunteers - event.currentVolunteers} slot tersisa)
-          </span>
-        )}
+        {!full && <span className="ml-1">({max - current} slot tersisa)</span>}
       </span>
     );
   };
+
+  // Untuk teks di bawah, pakai versi numeric yang sudah dibersihkan
+  const numericMax =
+    event && Number.isFinite(Number(event?.maxVolunteers))
+      ? Number(event.maxVolunteers)
+      : null;
+  const numericCurrent =
+    event && Number.isFinite(Number(event?.currentVolunteers))
+      ? Number(event.currentVolunteers)
+      : null;
 
   return (
     <div className="max-w-xl mx-auto mt-8 bg-white shadow p-6 rounded">
@@ -223,23 +223,20 @@ export default function EventDetail() {
               </span>
             </p>
           )}
-          {typeof event.maxVolunteers === "number" && (
+
+          {numericMax !== null && (
             <p className="text-gray-700 mb-1">
               Maksimal relawan:{" "}
-              <span className="font-semibold">{event.maxVolunteers}</span>
+              <span className="font-semibold">{numericMax}</span>
             </p>
           )}
 
-          {/* Jumlah pendaftar dari BE */}
-          {typeof event.currentVolunteers === "number" && (
+          {numericCurrent !== null && (
             <p className="text-gray-700 mb-1">
               Jumlah pendaftar:{" "}
               <span className="font-semibold">
-                {event.currentVolunteers}
-                {typeof event.maxVolunteers === "number" && (
-                  <> / {event.maxVolunteers}</>
-                )}{" "}
-                relawan
+                {numericCurrent}
+                {numericMax !== null && <> / {numericMax}</>} relawan
               </span>
             </p>
           )}
@@ -258,15 +255,15 @@ export default function EventDetail() {
               <div className="mt-4">
                 <button
                   onClick={() => navigate("/login")}
-                  className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 disabled:opacity-60 text-sm"
+                  className="bg-blue-600 text-white px-4 py-2 rounded text-sm"
                 >
-                  Daftar sebagai relawan
+                  Login untuk daftar
                 </button>
               </div>
             )}
 
             {isLoggedIn && (
-              <div className="flex gap-2 items-center">
+              <div className="flex gap-2 items-center mt-4">
                 {!myRegistration ? (
                   <button
                     onClick={handleJoin}
@@ -289,19 +286,13 @@ export default function EventDetail() {
                     disabled={actionLoading}
                     className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700 disabled:opacity-60 text-sm"
                   >
-                    {actionLoading
-                      ? "Memproses..."
-                      : "Batalkan pendaftaran"}
+                    {actionLoading ? "Memproses..." : "Batalkan pendaftaran"}
                   </button>
                 )}
               </div>
             )}
 
-            {info && (
-              <p className="text-xs text-green-700 bg-green-50 border border-green-200 p-2 rounded">
-                {info}
-              </p>
-            )}
+            {info && <p className="text-xs text-green-600 mt-2">{info}</p>}
           </div>
         </>
       )}
