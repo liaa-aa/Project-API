@@ -1,6 +1,7 @@
 // frontend/src/pages/EventDetail.jsx
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { getWeatherForEvent } from "../api/weatherApi";
 import {
   getEventById,
   joinEvent,
@@ -23,6 +24,10 @@ export default function EventDetail() {
   const [info, setInfo] = useState("");
 
   const isLoggedIn = !!localStorage.getItem("token");
+
+  const [weather, setWeather] = useState(null);
+  const [loadingWeather, setLoadingWeather] = useState(false);
+  const [weatherError, setWeatherError] = useState("");
 
   // ==== HELPER: cek apakah event sudah penuh ====
   const isEventFull = (ev) => {
@@ -67,6 +72,25 @@ export default function EventDetail() {
     };
 
     fetchEvent();
+  }, [id]);
+
+  // Ambil cuaca untuk bencana ini
+  useEffect(() => {
+    const fetchWeather = async () => {
+      setLoadingWeather(true);
+      setWeatherError("");
+      try {
+        const data = await getWeatherForEvent(id);
+        setWeather(data);
+      } catch (err) {
+        // Jangan ganggu UI utama, cukup tampilkan pesan kecil saja
+        setWeatherError(err.message || "Gagal memuat info cuaca");
+      } finally {
+        setLoadingWeather(false);
+      }
+    };
+
+    fetchWeather();
   }, [id]);
 
   // Ambil pendaftaran saya untuk event ini (kalau login)
@@ -240,6 +264,61 @@ export default function EventDetail() {
               </span>
             </p>
           )}
+
+          {loadingWeather ? (
+            <p className="text-xs text-gray-500 mt-4">
+              Memuat informasi cuaca...
+            </p>
+          ) : weatherError ? (
+            <p className="text-xs text-red-500 mt-4">{weatherError}</p>
+          ) : weather ? (
+            <div className="mt-6 bg-blue-50 border border-blue-100 rounded p-4">
+              <h2 className="text-sm font-semibold text-blue-800 mb-2">
+                Perkiraan cuaca di lokasi event
+              </h2>
+              <div className="flex items-center gap-3">
+                {weather.icon && (
+                  <img
+                    src={`https://openweathermap.org/img/wn/${weather.icon}@2x.png`}
+                    alt={weather.description}
+                    className="w-10 h-10"
+                  />
+                )}
+                <div className="text-sm text-gray-800">
+                  <p className="font-medium">
+                    {weather.city}
+                    {weather.country && `, ${weather.country}`}
+                  </p>
+                  <p>
+                    {weather.temp != null && (
+                      <>
+                        Suhu:{" "}
+                        <span className="font-semibold">
+                          {Math.round(weather.temp)}°C
+                        </span>{" "}
+                      </>
+                    )}
+                    {weather.feelsLike != null && (
+                      <span className="text-xs text-gray-600">
+                        (terasa seperti {Math.round(weather.feelsLike)}°C)
+                      </span>
+                    )}
+                  </p>
+                  {weather.description && (
+                    <p className="capitalize">Kondisi: {weather.description}</p>
+                  )}
+                  <p className="text-xs text-gray-600 mt-1">
+                    {weather.humidity != null && (
+                      <>Kelembapan: {weather.humidity}% · </>
+                    )}
+                    {weather.windSpeed != null && (
+                      <>Angin: {weather.windSpeed} m/s</>
+                    )}
+                  </p>
+                </div>
+              </div>
+            </div>
+          ) : null}
 
           <p className="text-gray-600 mt-3">{event.description}</p>
 
