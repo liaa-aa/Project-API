@@ -30,4 +30,4 @@ router.get('/users/:id', '#controllers/usersController.show')
 
 router.group(() => {
   router.post('/graphql', '#controllers/graphqlController.handle')
-})
+}).use(middleware.auth())

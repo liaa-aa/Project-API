@@ -102,7 +102,7 @@ export const root = {
     if (location !== undefined) updates.location = location
     if (type !== undefined) updates.type = type
     if (date !== undefined) updates.date = date
-    if (maxVolunteers !== undefined) updates.maxVolunteers = maxVolunteers // ➕ NEW
+    if (maxVolunteers !== undefined) updates.maxVolunteers = maxVolunteers 
 
     const bencana = await Bencana.findByIdAndUpdate(id, updates, { new: true })
     if (!bencana) {
