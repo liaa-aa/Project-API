@@ -20,16 +20,14 @@ router
   .group(() => {
     router.get('/users', '#controllers/usersController.index')
     router.post('/users', '#controllers/usersController.store')
-    router.put('/users/:id', '#controllers/usersController.update')
     router.delete('/users/:id', '#controllers/usersController.destroy')
   })
   .use(middleware.auth())
   .use(middleware.admin())
 
+router.put('/users/:id', '#controllers/usersController.update').use(middleware.auth())
+router.get('/users/:id', '#controllers/usersController.show')
 
-  router.get('/users/:id', '#controllers/usersController.show')
-
-router
-  .group(() => {
-    router.post('/graphql', '#controllers/graphqlController.handle')
-  })
+router.group(() => {
+  router.post('/graphql', '#controllers/graphqlController.handle')
+})
