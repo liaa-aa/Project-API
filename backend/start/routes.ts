@@ -28,6 +28,11 @@ router
 router.put('/users/:id', '#controllers/usersController.update').use(middleware.auth())
 router.get('/users/:id', '#controllers/usersController.show')
 
-router.group(() => {
-  router.post('/graphql', '#controllers/graphqlController.handle')
-}).use(middleware.auth())
+router
+  .group(() => {
+    router.post('/graphql', '#controllers/graphqlController.handle')
+  })
+  .use(middleware.auth())
+
+router.get('/weather', '#controllers/weatherController.getByCity')
+router.get('/weather/bencana/:id', '#controllers/weatherController.getByBencana')
