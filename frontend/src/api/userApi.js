@@ -14,25 +14,25 @@ export const getLocalUser = () => {
   }
 };
 
-/**
- * Ambil profil user dari backend.
- * Menggunakan endpoint REST: GET /users/:id
- * (sesuai routes & usersController.show di backend)
- */
-export const getUserProfile = async () => {
-  const localUser = getLocalUser();
-  if (!localUser || !localUser.id) {
-    throw new Error("Belum login atau data user lokal tidak valid");
-  }
-
+// Header dengan token untuk endpoint yang butuh Auth
+const getAuthHeaders = () => {
   const token = localStorage.getItem("token");
+  return token
+    ? {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      }
+    : { "Content-Type": "application/json" };
+};
 
-  const res = await fetch(`${API_BASE_URL}/users/${localUser.id}`, {
+// Ambil profil user (GET /users/:id)
+export const getUserProfile = async (id) => {
+  const res = await fetch(`${API_BASE_URL}/users/${id}`, {
     method: "GET",
     headers: {
       "Content-Type": "application/json",
-      // Sebenarnya endpoint ini public di BE, tapi kita sertakan token kalau sewaktu-waktu dibuat protected
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      // GET sebenarnya tidak wajib auth, tapi kalau ada token sekalian kirim saja
+      ...getAuthHeaders(),
     },
   });
 
@@ -44,5 +44,24 @@ export const getUserProfile = async () => {
 
   // BE mengembalikan dokumen User secara langsung (dari Mongo):
   // { _id, name, email, role, ... }
+  return data;
+};
+
+// Update profil user (PUT /users/:id)
+// payload bisa berisi { name, email } (dan field lain jika nanti perlu)
+export const updateUserProfile = async (id, payload) => {
+  const res = await fetch(`${API_BASE_URL}/users/${id}`, {
+    method: "PUT",
+    headers: getAuthHeaders(),
+    body: JSON.stringify(payload),
+  });
+
+  const data = await res.json().catch(() => ({}));
+
+  if (!res.ok) {
+    throw new Error(data.message || "Gagal mengupdate profil user");
+  }
+
+  // BE balas user yang sudah di-update
   return data;
 };

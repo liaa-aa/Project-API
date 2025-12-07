@@ -1,155 +1,285 @@
 // frontend/src/pages/Profile.jsx
 
 import { useEffect, useState } from "react";
-import { getUserProfile, getLocalUser } from "../api/userApi";
+import {
+  getUserProfile,
+  getLocalUser,
+  updateUserProfile,
+} from "../api/userApi";
 import { getMyRegistrations, getEvents } from "../api/eventApi";
 
 export default function Profile() {
+  // data profil & form
   const [profile, setProfile] = useState(null);
-  const [registrations, setRegistrations] = useState([]);
-  const [events, setEvents] = useState([]);
+  const [form, setForm] = useState({
+    name: "",
+    email: "",
+  });
 
   const [loadingProfile, setLoadingProfile] = useState(true);
-  const [loadingRegs, setLoadingRegs] = useState(true);
   const [errorProfile, setErrorProfile] = useState("");
+
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState("");
+  const [saveSuccess, setSaveSuccess] = useState("");
+
+  // data pendaftaran relawan
+  const [registrations, setRegistrations] = useState([]);
+  const [eventsMap, setEventsMap] = useState({});
+  const [loadingRegs, setLoadingRegs] = useState(true);
   const [errorRegs, setErrorRegs] = useState("");
 
-  const localUser = getLocalUser();
-
+  // ========================
+  // LOAD DATA AWAL
+  // ========================
   useEffect(() => {
+    const localUser = getLocalUser();
+
+    if (!localUser) {
+      setErrorProfile("Kamu belum login. Silakan login terlebih dahulu.");
+      setLoadingProfile(false);
+      setLoadingRegs(false);
+      return;
+    }
+
     const fetchProfile = async () => {
       setLoadingProfile(true);
       setErrorProfile("");
+
       try {
-        const data = await getUserProfile();
+        const data = await getUserProfile(localUser.id);
         setProfile(data);
+        setForm({
+          name: data.name || "",
+          email: data.email || "",
+        });
       } catch (err) {
-        setErrorProfile(err.message || "Gagal memuat profil");
+        console.error(err);
+        setErrorProfile(err.message || "Gagal memuat profil.");
       } finally {
         setLoadingProfile(false);
       }
     };
 
-    const fetchRegsAndEvents = async () => {
+    const fetchRegistrations = async () => {
       setLoadingRegs(true);
       setErrorRegs("");
 
       try {
-        // Ambil riwayat pendaftaran + daftar event sekaligus
-        const [regData, eventData] = await Promise.all([
-          getMyRegistrations(), // GraphQL myRegistrations
-          getEvents(),          // GraphQL getBencana
+        const [regs, events] = await Promise.all([
+          getMyRegistrations(),
+          getEvents(),
         ]);
 
-        setRegistrations(regData || []);
-        setEvents(eventData || []);
+        const map = {};
+        events.forEach((ev) => {
+          map[ev.id] = ev;
+        });
+
+        setRegistrations(regs);
+        setEventsMap(map);
       } catch (err) {
-        setErrorRegs(err.message || "Gagal memuat riwayat pendaftaran");
+        console.error(err);
+        setErrorRegs(err.message || "Gagal memuat data pendaftaran.");
       } finally {
         setLoadingRegs(false);
       }
     };
 
     fetchProfile();
-    fetchRegsAndEvents();
+    fetchRegistrations();
   }, []);
 
-  // Helper: cari event berdasarkan bencanaId dan kembalikan info yang dibutuhkan
-  const getEventInfo = (bencanaId) => {
-    const ev = events.find((e) => e.id === bencanaId);
-    if (!ev) {
-      return {
-        title: "(judul tidak ditemukan)",
-        location: "-",
-        type: "-",
-      };
-    }
-    return {
-      title: ev.title || "(tanpa judul)",
-      location: ev.location || "-",
-      type: ev.type || "-",
-    };
+  // ========================
+  // HANDLER FORM
+  // ========================
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setForm((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
   };
 
-  // Helper: styling badge status
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!profile) return;
+
+    const userId = profile._id || profile.id; // jaga-jaga field-nya _id atau id
+    if (!userId) return;
+
+    setSaving(true);
+    setSaveError("");
+    setSaveSuccess("");
+
+    try {
+      const updated = await updateUserProfile(userId, {
+        name: form.name,
+        email: form.email,
+        // kalau nanti mau tambah field lain, tinggal tambahkan di sini
+      });
+
+      setProfile(updated);
+      setSaveSuccess("Profil berhasil diperbarui.");
+
+      // update juga user di localStorage supaya Navbar dsb ikut ke-refresh datanya
+      const local = getLocalUser();
+      if (local) {
+        localStorage.setItem(
+          "user",
+          JSON.stringify({
+            ...local,
+            name: updated.name,
+            email: updated.email,
+          })
+        );
+      }
+    } catch (err) {
+      console.error(err);
+      setSaveError(err.message || "Gagal memperbarui profil.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // ========================
+  // HELPER TAMPILAN
+  // ========================
   const renderStatusBadge = (status) => {
-    const s = (status || "").toLowerCase();
-    let colorClass =
-      "bg-gray-200 text-gray-800"; // default
+    const base =
+      "inline-flex px-3 py-1 rounded-full text-xs font-semibold capitalize ";
 
-    if (s === "pending") colorClass = "bg-yellow-100 text-yellow-800";
-    if (s === "approved") colorClass = "bg-green-100 text-green-800";
-    if (s === "rejected") colorClass = "bg-red-100 text-red-800";
+    if (status === "approved") {
+      return (
+        <span className={base + "bg-green-100 text-green-700"}>Disetujui</span>
+      );
+    }
 
+    if (status === "rejected") {
+      return <span className={base + "bg-red-100 text-red-700"}>Ditolak</span>;
+    }
+
+    // default: pending
     return (
-      <span
-        className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${colorClass}`}
-      >
-        {status || "-"}
-      </span>
+      <span className={base + "bg-yellow-100 text-yellow-700"}>Menunggu</span>
     );
   };
 
+  const getEventTitle = (bencanaId) =>
+    eventsMap[bencanaId]?.title || "Event tidak ditemukan";
+
+  // ========================
+  // RENDER
+  // ========================
   return (
-    <div className="max-w-4xl mx-auto p-4">
-      <h1 className="text-2xl font-bold mb-4">Profil Saya</h1>
+    <div className="max-w-5xl mx-auto py-8 px-4">
+      <h1 className="text-2xl font-bold mb-6">Profil Saya</h1>
 
-      {/* ---------------------- PROFIL ---------------------------- */}
-      <div className="mb-8 border rounded-lg p-4 shadow-sm bg-white">
-        {loadingProfile && <p>Memuat profil...</p>}
-        {errorProfile && <p className="text-red-600">{errorProfile}</p>}
+      <div className="grid md:grid-cols-2 gap-8">
+        {/* KIRI: FORM PROFIL */}
+        <section className="bg-white rounded-lg shadow p-6">
+          <h2 className="text-lg font-semibold mb-4">Data Akun</h2>
 
-        {!loadingProfile && !errorProfile && profile && (
-          <>
-            <p className="mb-2">
-              <span className="font-semibold">Nama:</span>{" "}
-              {profile.name || localUser?.name}
+          {loadingProfile ? (
+            <p className="text-gray-500 text-sm">Memuat data profil...</p>
+          ) : errorProfile ? (
+            <p className="text-red-600 text-sm">{errorProfile}</p>
+          ) : (
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <label
+                  htmlFor="name"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
+                  Nama
+                </label>
+                <input
+                  id="name"
+                  name="name"
+                  type="text"
+                  value={form.name}
+                  onChange={handleChange}
+                  className="w-full border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Nama lengkap"
+                  required
+                />
+              </div>
+
+              <div>
+                <label
+                  htmlFor="email"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
+                  Email
+                </label>
+                <input
+                  id="email"
+                  name="email"
+                  type="email"
+                  value={form.email}
+                  onChange={handleChange}
+                  className="w-full border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="email@example.com"
+                  required
+                />
+              </div>
+
+              {profile?.role && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Role
+                  </label>
+                  <p className="inline-flex items-center px-3 py-1 rounded-full bg-gray-100 text-xs font-medium text-gray-700">
+                    {profile.role}
+                  </p>
+                </div>
+              )}
+
+              {saveError && <p className="text-sm text-red-600">{saveError}</p>}
+              {saveSuccess && (
+                <p className="text-sm text-green-600">{saveSuccess}</p>
+              )}
+
+              <button
+                type="submit"
+                disabled={saving}
+                className="inline-flex items-center justify-center px-4 py-2 rounded-md bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 disabled:opacity-60"
+              >
+                {saving ? "Menyimpan..." : "Simpan Perubahan"}
+              </button>
+            </form>
+          )}
+        </section>
+
+        {/* KANAN: RIWAYAT PENDAFTARAN */}
+        <section className="bg-white rounded-lg shadow p-6">
+          <h2 className="text-lg font-semibold mb-4">
+            Riwayat Pendaftaran Relawan
+          </h2>
+
+          {loadingRegs ? (
+            <p className="text-gray-500 text-sm">Memuat data pendaftaran...</p>
+          ) : errorRegs ? (
+            <p className="text-red-600 text-sm">{errorRegs}</p>
+          ) : registrations.length === 0 ? (
+            <p className="text-gray-500 text-sm">
+              Kamu belum pernah mendaftar sebagai relawan.
             </p>
-            <p className="mb-2">
-              <span className="font-semibold">Email:</span>{" "}
-              {profile.email || localUser?.email}
-            </p>
-            <p className="mb-2">
-              <span className="font-semibold">Role:</span>{" "}
-              {profile.role || localUser?.role}
-            </p>
-          </>
-        )}
-      </div>
-
-      {/* ---------------------- RIWAYAT PENDAFTARAN (CARD VIEW) ---------------------------- */}
-      <div className="border rounded-lg p-4 shadow-sm bg-white">
-        <h2 className="text-xl font-semibold mb-3">Riwayat Pendaftaran Relawan</h2>
-
-        {loadingRegs && <p>Memuat riwayat pendaftaran...</p>}
-        {errorRegs && <p className="text-red-600">{errorRegs}</p>}
-
-        {!loadingRegs && !errorRegs && registrations.length === 0 && (
-          <p>Belum ada pendaftaran event yang dilakukan.</p>
-        )}
-
-        {!loadingRegs && !errorRegs && registrations.length > 0 && (
-          <div className="space-y-3">
-            {registrations.map((reg) => {
-              const info = getEventInfo(reg.bencanaId);
-
-              return (
+          ) : (
+            <div className="space-y-4 max-h-[28rem] overflow-y-auto">
+              {registrations.map((reg) => (
                 <div
                   key={reg.id}
-                  className="border rounded-lg p-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2"
+                  className="border rounded-lg px-4 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2"
                 >
                   <div>
-                    <h3 className="text-sm font-semibold">{info.title}</h3>
-                    <p className="text-xs text-gray-600 mt-1">
-                      <span className="font-medium">Lokasi:</span> {info.location}
+                    <p className="font-medium text-sm">
+                      {getEventTitle(reg.bencanaId)}
                     </p>
-                    <p className="text-xs text-gray-600">
-                      <span className="font-medium">Tipe:</span> {info.type}
-                    </p>
-                    <p className="text-xs text-gray-600 mt-1">
-                      <span className="font-medium">Waktu pendaftaran:</span>{" "}
+                    <p className="text-xs text-gray-500 mt-1">
+                      Daftar pada:{" "}
                       {reg.createdAt
-                        ? new Date(reg.createdAt).toLocaleString()
+                        ? new Date(reg.createdAt).toLocaleString("id-ID")
                         : "-"}
                     </p>
                   </div>
@@ -158,10 +288,10 @@ export default function Profile() {
                     {renderStatusBadge(reg.status)}
                   </div>
                 </div>
-              );
-            })}
-          </div>
-        )}
+              ))}
+            </div>
+          )}
+        </section>
       </div>
     </div>
   );
