@@ -1,7 +1,8 @@
-// frontend/src/App.jsx
+// src/App.jsx
 
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, useLocation } from "react-router-dom";
 import Navbar from "./components/Navbar";
+import Footer from "./components/Footer";
 
 // Halaman publik & user
 import Home from "./pages/Home";
@@ -11,22 +12,28 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Profile from "./pages/Profile";
 
+// Proteksi route
+import ProtectedRoute from "./components/ProtectedRoute";
+
 // Halaman admin
 import AdminVolunteers from "./pages/AdminVolunteers";
 import AdminEvents from "./pages/AdminEvents";
-
-// Proteksi route
-import ProtectedRoute from "./components/ProtectedRoute";
-import Footer from "./components/Footer";
 import AdminUsers from "./pages/AdminUsers";
+import AdminDashboard from "./pages/AdminDashboard";
+import AdminLayout from "./components/AdminLayout";
 
 function App() {
+  const location = useLocation();
+  const isAdminRoute = location.pathname.startsWith("/admin");
+
   return (
     <div className="min-h-screen flex flex-col bg-slate-50">
-      <Navbar />
+      {/* Navbar hanya untuk halaman publik/user */}
+      {!isAdminRoute && <Navbar />}
 
-      <main className="flex-1 pt-11">
+      <main className={isAdminRoute ? "flex-1" : "flex-1 pt-11"}>
         <Routes>
+          {/* ROUTE PUBLIK & USER */}
           <Route path="/" element={<Home />} />
           <Route path="/events" element={<Events />} />
           <Route path="/events/:id" element={<EventDetail />} />
@@ -42,36 +49,32 @@ function App() {
             }
           />
 
+          {/* AREA ADMIN (semua dibungkus AdminLayout + ProtectedRoute) */}
           <Route
-            path="/admin/volunteers"
+            path="/admin"
             element={
               <ProtectedRoute requiredRole="admin">
-                <AdminVolunteers />
+                <AdminLayout />
               </ProtectedRoute>
             }
-          />
-          <Route
-            path="/admin/events"
-            element={
-              <ProtectedRoute requiredRole="admin">
-                <AdminEvents />
-              </ProtectedRoute>
-            }
-          />
+          >
+            {/* /admin → Dashboard */}
+            <Route index element={<AdminDashboard />} />
 
-          <Route
-            path="/admin/users"
-            element={
-              <ProtectedRoute requiredRole="admin">
-                <AdminUsers />
-              </ProtectedRoute>
-            }
-          />
+            {/* /admin/volunteers */}
+            <Route path="volunteers" element={<AdminVolunteers />} />
+
+            {/* /admin/events */}
+            <Route path="events" element={<AdminEvents />} />
+
+            {/* /admin/users */}
+            <Route path="users" element={<AdminUsers />} />
+          </Route>
         </Routes>
       </main>
 
-      {/* footer di paling bawah */}
-      <Footer />
+      {/* Footer juga hanya tampil di halaman publik/user */}
+      {!isAdminRoute && <Footer />}
     </div>
   );
 }
