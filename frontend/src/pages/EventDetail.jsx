@@ -1,5 +1,5 @@
 // frontend/src/pages/EventDetail.jsx
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { getWeatherForEvent } from "../api/weatherApi";
 import {
@@ -14,47 +14,25 @@ export default function EventDetail() {
   const navigate = useNavigate();
 
   const [event, setEvent] = useState(null);
-  const [loadingEvent, setLoadingEvent] = useState(false);
-
-  const [myRegistration, setMyRegistration] = useState(null);
-  const [loadingRegistration, setLoadingRegistration] = useState(false);
-
-  const [actionLoading, setActionLoading] = useState(false);
+  const [loadingEvent, setLoadingEvent] = useState(true);
   const [error, setError] = useState("");
-  const [info, setInfo] = useState("");
-
-  const isLoggedIn = !!localStorage.getItem("token");
 
   const [weather, setWeather] = useState(null);
   const [loadingWeather, setLoadingWeather] = useState(false);
-  const [weatherError, setWeatherError] = useState("");
 
-  // ==== HELPER: cek apakah event sudah penuh ====
-  const isEventFull = (ev) => {
-    if (!ev) return false;
-    const max = Number(ev.maxVolunteers);
-    const current = Number(ev.currentVolunteers);
-    if (!Number.isFinite(max) || !Number.isFinite(current)) return false;
-    return current >= max;
-  };
+  const [registrations, setRegistrations] = useState([]);
+  const [loadingRegistrations, setLoadingRegistrations] = useState(false);
+  const [actionLoading, setActionLoading] = useState(false);
+  const [info, setInfo] = useState("");
 
-  const eventFull = isEventFull(event);
+  // Cari pendaftaran user untuk event ini
+  const myRegistration = useMemo(() => {
+    if (!registrations || !id) return null;
+    return registrations.find((reg) => String(reg.bencanaId) === String(id));
+  }, [registrations, id]);
 
-  // ==== HELPER: update jumlah volunteer di state event ====
-  const updateVolunteerCount = (delta) => {
-    setEvent((prev) => {
-      if (!prev) return prev;
-      const current = Number.isFinite(Number(prev.currentVolunteers))
-        ? Number(prev.currentVolunteers)
-        : 0;
-      let next = current + delta;
-      if (next < 0) next = 0;
-      return {
-        ...prev,
-        currentVolunteers: next,
-      };
-    });
-  };
+  const isRegistered = !!myRegistration;
+  const registrationStatus = myRegistration?.status || null;
 
   // Ambil detail event
   useEffect(() => {
@@ -63,28 +41,35 @@ export default function EventDetail() {
       setError("");
       try {
         const data = await getEventById(id);
-        setEvent(data);
+        if (!data) {
+          setError("Event tidak ditemukan");
+        } else {
+          setEvent(data);
+        }
       } catch (err) {
+        console.error(err);
         setError(err.message || "Gagal memuat detail event");
       } finally {
         setLoadingEvent(false);
       }
     };
 
-    fetchEvent();
+    if (id) {
+      fetchEvent();
+    }
   }, [id]);
 
-  // Ambil cuaca untuk bencana ini
+  // Ambil cuaca untuk event ini
   useEffect(() => {
     const fetchWeather = async () => {
+      if (!id) return;
       setLoadingWeather(true);
-      setWeatherError("");
       try {
         const data = await getWeatherForEvent(id);
         setWeather(data);
       } catch (err) {
-        // Jangan ganggu UI utama, cukup tampilkan pesan kecil saja
-        setWeatherError(err.message || "Gagal memuat info cuaca");
+        console.error("Gagal mengambil cuaca:", err);
+        // tidak set error global, supaya halaman tetap bisa terbuka
       } finally {
         setLoadingWeather(false);
       }
@@ -93,288 +78,277 @@ export default function EventDetail() {
     fetchWeather();
   }, [id]);
 
-  // Ambil pendaftaran saya untuk event ini (kalau login)
+  // Ambil semua pendaftaran milik user
   useEffect(() => {
-    const fetchMyReg = async () => {
-      if (!isLoggedIn) return;
-      setLoadingRegistration(true);
-      setError("");
+    const fetchRegistrations = async () => {
+      setLoadingRegistrations(true);
       try {
-        const regs = await getMyRegistrations();
-        const found = regs.find((r) => {
-          const bencanaId =
-            (typeof r.bencana === "string" ? r.bencana : r.bencana?._id) ||
-            r.bencanaId;
-          return String(bencanaId) === String(id);
-        });
-        setMyRegistration(found || null);
+        const data = await getMyRegistrations();
+        setRegistrations(data);
       } catch (err) {
-        console.error(err);
+        console.error("Gagal mengambil pendaftaran:", err);
       } finally {
-        setLoadingRegistration(false);
+        setLoadingRegistrations(false);
       }
     };
 
-    fetchMyReg();
-  }, [id, isLoggedIn]);
+    fetchRegistrations();
+  }, []);
 
   const handleJoin = async () => {
-    setError("");
-    setInfo("");
+    if (!id) return;
     setActionLoading(true);
+    setInfo("");
     try {
       const res = await joinEvent(id);
-      setMyRegistration(res.data || null);
       setInfo(res.message || "Berhasil mendaftar sebagai relawan");
-      updateVolunteerCount(1);
+
+      // update state registrations
+      if (res.data) {
+        setRegistrations((prev) => [...prev, res.data]);
+      } else {
+        const fresh = await getMyRegistrations();
+        setRegistrations(fresh);
+      }
     } catch (err) {
-      setError(err.message || "Gagal mendaftar");
+      console.error(err);
+      setInfo(err.message || "Gagal mendaftar sebagai relawan");
     } finally {
       setActionLoading(false);
     }
   };
 
   const handleCancel = async () => {
-    setError("");
-    setInfo("");
+    if (!id) return;
+    if (!window.confirm("Yakin ingin membatalkan pendaftaran?")) return;
+
     setActionLoading(true);
+    setInfo("");
     try {
       const res = await cancelEventRegistration(id);
-      setMyRegistration(null);
       setInfo(res.message || "Pendaftaran berhasil dibatalkan");
-      updateVolunteerCount(-1);
-    } catch (err) {
-      setError(
-        err.message ||
-          "Gagal membatalkan pendaftaran (pastikan endpoint cancel sudah ada di backend)"
+
+      // hapus dari registrations lokal
+      setRegistrations((prev) =>
+        prev.filter((reg) => String(reg.bencanaId) !== String(id))
       );
+    } catch (err) {
+      console.error(err);
+      setInfo(err.message || "Gagal membatalkan pendaftaran");
     } finally {
       setActionLoading(false);
     }
   };
 
-  const renderStatusBadge = () => {
-    if (!myRegistration) return null;
-    const status = myRegistration.status || "pending";
-    const base =
-      "inline-block px-3 py-1 rounded-full text-xs font-semibold capitalize";
-    const colorByStatus = {
-      pending: "bg-yellow-100 text-yellow-800",
-      approved: "bg-green-100 text-green-800",
-      rejected: "bg-red-100 text-red-800",
-    };
-    return (
-      <span className={`${base} ${colorByStatus[status] || ""}`}>
-        Status: {status}
-      </span>
-    );
+  const formatDate = (dateStr) => {
+    if (!dateStr) return "-";
+    const d = new Date(dateStr);
+    if (Number.isNaN(d.getTime())) return dateStr;
+    return d.toLocaleDateString("id-ID", {
+      day: "2-digit",
+      month: "long",
+      year: "numeric",
+    });
   };
 
-  // Badge kapasitas berdasarkan jumlah volunteer
-  const renderCapacityBadge = () => {
+  const renderRegistrationSection = () => {
+    if (loadingRegistrations) {
+      return (
+        <p className="text-sm text-gray-500">Memuat status pendaftaran...</p>
+      );
+    }
+
+    if (!localStorage.getItem("token")) {
+      return (
+        <p className="text-sm text-gray-600">
+          Silakan{" "}
+          <button
+            className="text-blue-600 underline"
+            onClick={() => navigate("/login")}
+          >
+            login
+          </button>{" "}
+          untuk mendaftar sebagai relawan.
+        </p>
+      );
+    }
+
     if (!event) return null;
 
     const max = Number(event.maxVolunteers);
     const current = Number(event.currentVolunteers);
-
-    if (!Number.isFinite(max) || !Number.isFinite(current)) {
-      return null;
-    }
-
-    const full = current >= max;
-    const base =
-      "inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold";
-    const color = full
-      ? "bg-red-100 text-red-800"
-      : "bg-green-100 text-green-800";
-
-    const userHasSlot =
-      !!myRegistration &&
-      (myRegistration.status === "approved" ||
-        myRegistration.status === "pending");
+    const hasMax = Number.isFinite(max) && max > 0;
+    const hasCurrent = Number.isFinite(current) && current >= 0;
+    const isFull = hasMax && hasCurrent && current >= max;
 
     return (
-      <span className={`${base} ${color}`}>
-        {full
-          ? userHasSlot
-            ? "Event penuh (kamu sudah terdaftar)"
-            : "Event penuh"
-          : "Slot tersedia"}
-        {!full && <span className="ml-1">({max - current} slot tersisa)</span>}
-      </span>
+      <div className="mt-4 space-y-2">
+        {hasMax && (
+          <p className="text-sm text-gray-700">
+            Kuota relawan:{" "}
+            <span className="font-semibold">
+              {hasCurrent ? current : 0} / {max}
+            </span>
+          </p>
+        )}
+
+        {isRegistered ? (
+          <div className="space-y-2">
+            <p className="text-sm text-green-700">
+              Kamu sudah terdaftar sebagai relawan untuk kegiatan ini.
+              {registrationStatus && (
+                <>
+                  {" "}
+                  Status:{" "}
+                  <span className="font-semibold uppercase">
+                    {registrationStatus}
+                  </span>
+                </>
+              )}
+            </p>
+            <button
+              onClick={handleCancel}
+              disabled={actionLoading}
+              className="px-4 py-2 rounded-lg bg-red-600 text-white text-sm disabled:opacity-60"
+            >
+              {actionLoading ? "Memproses..." : "Batalkan pendaftaran"}
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={handleJoin}
+            disabled={actionLoading || isFull}
+            className="px-4 py-2 rounded-lg bg-blue-600 text-white text-sm disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            {isFull
+              ? "Kuota penuh"
+              : actionLoading
+              ? "Memproses..."
+              : "Daftar sebagai relawan"}
+          </button>
+        )}
+      </div>
     );
   };
 
-  // Untuk teks di bawah, pakai versi numeric yang sudah dibersihkan
-  const numericMax =
-    event && Number.isFinite(Number(event?.maxVolunteers))
-      ? Number(event.maxVolunteers)
-      : null;
-  const numericCurrent =
-    event && Number.isFinite(Number(event?.currentVolunteers))
-      ? Number(event.currentVolunteers)
-      : null;
+  const renderWeatherSection = () => {
+    if (loadingWeather) {
+      return (
+        <div className="mt-6 border rounded-xl p-4 bg-white shadow-sm">
+          <p className="text-sm text-gray-500">Memuat informasi cuaca...</p>
+        </div>
+      );
+    }
+
+    if (!weather) return null;
+
+    const { city, country, weather: w } = weather;
+
+    return (
+      <div className="mt-6 border rounded-xl p-4 bg-white shadow-sm">
+        <h2 className="text-base font-semibold mb-2">
+          Perkiraan Cuaca Lokasi Kegiatan
+        </h2>
+        <p className="text-sm text-gray-600 mb-1">
+          {city}
+          {country ? `, ${country}` : ""}
+        </p>
+
+        <div className="flex items-center gap-4">
+          {w?.icon && (
+            <img
+              src={`https://openweathermap.org/img/wn/${w.icon}@2x.png`}
+              alt={w.description || "Weather icon"}
+              className="w-16 h-16"
+            />
+          )}
+          <div>
+            {typeof w?.temperature !== "undefined" && (
+              <p className="text-2xl font-bold">
+                {Math.round(w.temperature)}°C
+              </p>
+            )}
+            {w?.description && (
+              <p className="text-sm capitalize text-gray-700">
+                {w.description}
+              </p>
+            )}
+            {typeof w?.humidity !== "undefined" && (
+              <p className="text-xs text-gray-500">Kelembaban: {w.humidity}%</p>
+            )}
+            {typeof w?.windSpeed !== "undefined" && (
+              <p className="text-xs text-gray-500">
+                Kecepatan angin: {w.windSpeed} m/s
+              </p>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  if (loadingEvent) {
+    return (
+      <div className="max-w-3xl mx-auto mt-8 p-4">
+        <p>Memuat detail event...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="max-w-3xl mx-auto mt-8 p-4">
+        <p className="text-red-600 mb-3">{error}</p>
+        <button
+          onClick={() => navigate(-1)}
+          className="px-4 py-2 rounded-lg bg-gray-200 text-sm"
+        >
+          Kembali
+        </button>
+      </div>
+    );
+  }
+
+  if (!event) {
+    return (
+      <div className="max-w-3xl mx-auto mt-8 p-4">
+        <p>Event tidak ditemukan.</p>
+      </div>
+    );
+  }
 
   return (
-    <div className="max-w-xl mx-auto mt-8 bg-white shadow p-6 rounded">
-      {loadingEvent ? (
-        <p className="text-gray-600">Memuat detail event...</p>
-      ) : error ? (
-        <div className="text-sm text-red-600 bg-red-50 border border-red-200 p-2 rounded">
-          {error}
-        </div>
-      ) : !event ? (
-        <p className="text-gray-600">Event tidak ditemukan.</p>
-      ) : (
-        <>
-          {/* Judul + badge kapasitas */}
-          <div className="flex items-start justify-between gap-3 mb-2">
-            <h1 className="text-2xl font-bold">{event.title}</h1>
-            {renderCapacityBadge()}
-          </div>
+    <div className="max-w-3xl mx-auto mt-8 p-4 bg-slate-50 min-h-[60vh]">
+      <button
+        onClick={() => navigate(-1)}
+        className="text-sm text-blue-600 hover:underline mb-4"
+      >
+        ← Kembali ke daftar
+      </button>
 
-          <p className="text-gray-700 mb-1">
-            Lokasi: <span className="font-semibold">{event.location}</span>
-          </p>
-          <p className="text-gray-700 mb-1">
-            Jenis: <span className="font-semibold">{event.type}</span>
-          </p>
-          {event.date && (
-            <p className="text-gray-700 mb-1">
-              Tanggal:{" "}
-              <span className="font-semibold">
-                {new Date(event.date).toLocaleString()}
-              </span>
-            </p>
+      <div className="bg-white rounded-xl shadow-sm p-6">
+        <h1 className="text-2xl font-bold mb-2">{event.title}</h1>
+        <p className="text-sm text-gray-500 mb-4">
+          {event.type && (
+            <span className="inline-block px-2 py-1 rounded-full bg-blue-50 text-blue-700 text-xs font-semibold mr-2">
+              {event.type.toUpperCase()}
+            </span>
           )}
+          <span>{event.location}</span> • <span>{formatDate(event.date)}</span>
+        </p>
 
-          {numericMax !== null && (
-            <p className="text-gray-700 mb-1">
-              Maksimal relawan:{" "}
-              <span className="font-semibold">{numericMax}</span>
-            </p>
-          )}
+        <p className="text-sm text-gray-700 leading-relaxed mb-4">
+          {event.description}
+        </p>
 
-          {numericCurrent !== null && (
-            <p className="text-gray-700 mb-1">
-              Jumlah pendaftar:{" "}
-              <span className="font-semibold">
-                {numericCurrent}
-                {numericMax !== null && <> / {numericMax}</>} relawan
-              </span>
-            </p>
-          )}
+        {/* Bagian pendaftaran */}
+        {renderRegistrationSection()}
 
-          {loadingWeather ? (
-            <p className="text-xs text-gray-500 mt-4">
-              Memuat informasi cuaca...
-            </p>
-          ) : weatherError ? (
-            <p className="text-xs text-red-500 mt-4">{weatherError}</p>
-          ) : weather ? (
-            <div className="mt-6 bg-blue-50 border border-blue-100 rounded p-4">
-              <h2 className="text-sm font-semibold text-blue-800 mb-2">
-                Perkiraan cuaca di lokasi event
-              </h2>
-              <div className="flex items-center gap-3">
-                {weather.icon && (
-                  <img
-                    src={`https://openweathermap.org/img/wn/${weather.icon}@2x.png`}
-                    alt={weather.description}
-                    className="w-10 h-10"
-                  />
-                )}
-                <div className="text-sm text-gray-800">
-                  <p className="font-medium">
-                    {weather.city}
-                    {weather.country && `, ${weather.country}`}
-                  </p>
-                  <p>
-                    {weather.temp != null && (
-                      <>
-                        Suhu:{" "}
-                        <span className="font-semibold">
-                          {Math.round(weather.temp)}°C
-                        </span>{" "}
-                      </>
-                    )}
-                    {weather.feelsLike != null && (
-                      <span className="text-xs text-gray-600">
-                        (terasa seperti {Math.round(weather.feelsLike)}°C)
-                      </span>
-                    )}
-                  </p>
-                  {weather.description && (
-                    <p className="capitalize">Kondisi: {weather.description}</p>
-                  )}
-                  <p className="text-xs text-gray-600 mt-1">
-                    {weather.humidity != null && (
-                      <>Kelembapan: {weather.humidity}% · </>
-                    )}
-                    {weather.windSpeed != null && (
-                      <>Angin: {weather.windSpeed} m/s</>
-                    )}
-                  </p>
-                </div>
-              </div>
-            </div>
-          ) : null}
+        {info && <p className="text-xs text-green-600 mt-2">{info}</p>}
 
-          <p className="text-gray-600 mt-3">{event.description}</p>
-
-          {/* status & tombol aksi */}
-          <div className="mt-6 space-y-2">
-            {renderStatusBadge()}
-
-            {loadingRegistration && (
-              <p className="text-xs text-gray-500">Memeriksa status...</p>
-            )}
-
-            {!isLoggedIn && (
-              <div className="mt-4">
-                <button
-                  onClick={() => navigate("/login")}
-                  className="bg-blue-600 text-white px-4 py-2 rounded text-sm"
-                >
-                  Login untuk daftar
-                </button>
-              </div>
-            )}
-
-            {isLoggedIn && (
-              <div className="flex gap-2 items-center mt-4">
-                {!myRegistration ? (
-                  <button
-                    onClick={handleJoin}
-                    disabled={actionLoading || eventFull}
-                    className={`text-white px-4 py-2 rounded disabled:opacity-60 text-sm ${
-                      eventFull
-                        ? "bg-gray-400 cursor-not-allowed"
-                        : "bg-blue-600 hover:bg-blue-700"
-                    }`}
-                  >
-                    {eventFull
-                      ? "Event penuh"
-                      : actionLoading
-                      ? "Memproses..."
-                      : "Daftar sebagai relawan"}
-                  </button>
-                ) : (
-                  <button
-                    onClick={handleCancel}
-                    disabled={actionLoading}
-                    className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700 disabled:opacity-60 text-sm"
-                  >
-                    {actionLoading ? "Memproses..." : "Batalkan pendaftaran"}
-                  </button>
-                )}
-              </div>
-            )}
-
-            {info && <p className="text-xs text-green-600 mt-2">{info}</p>}
-          </div>
-        </>
-      )}
+        {/* Bagian cuaca */}
+        {renderWeatherSection()}
+      </div>
     </div>
   );
 }

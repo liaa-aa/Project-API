@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { login, googleLogin } from "../api/authApi"; // tambahkan googleLogin
+import { login, googleLogin } from "../api/authApi";
 
 // ambil client id dari .env (sudah ada di project-mu)
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
@@ -15,21 +15,20 @@ const Login = () => {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // login biasa (email + password)
+  // --------------------------
+  // LOGIN EMAIL + PASSWORD
+  // --------------------------
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
     setLoading(true);
 
     try {
-      // panggil API login (harus return { token, user })
-      const data = await login(email, password);
+      const data = await login(email, password); // { token, user }
 
-      // simpan ke localStorage
       localStorage.setItem("token", data.token);
       localStorage.setItem("user", JSON.stringify(data.user));
 
-      // arahkan sesuai role
       if (data.user.role === "admin") {
         navigate("/admin/volunteers");
       } else {
@@ -47,7 +46,9 @@ const Login = () => {
     }
   };
 
-  // callback ketika Google mengembalikan credential (idToken)
+  // --------------------------
+  // CALLBACK GOOGLE LOGIN
+  // --------------------------
   const handleGoogleResponse = async (response) => {
     try {
       setError("");
@@ -59,14 +60,12 @@ const Login = () => {
         return;
       }
 
-      // panggil API /google-login di backend
-      const data = await googleLogin(idToken); // { message, token, user }
+      // panggil API google login di backend
+      const data = await googleLogin(idToken); // { token, user }
 
-      // simpan ke localStorage (sama seperti login biasa)
       localStorage.setItem("token", data.token);
       localStorage.setItem("user", JSON.stringify(data.user));
 
-      // redirect sesuai role
       if (data.user.role === "admin") {
         navigate("/admin/volunteers");
       } else {
@@ -80,41 +79,63 @@ const Login = () => {
     }
   };
 
-  // inisialisasi Google Identity Services & render tombol
+  // --------------------------
+  // INIT GOOGLE IDENTITY + RENDER BUTTON
+  // --------------------------
   useEffect(() => {
     if (!GOOGLE_CLIENT_ID) {
       console.warn("VITE_GOOGLE_CLIENT_ID belum di-set di .env frontend");
       return;
     }
 
-    // pastikan script google sudah loaded
-    if (
-      !window.google ||
-      !window.google.accounts ||
-      !window.google.accounts.id
-    ) {
-      console.warn("Google Identity script belum siap");
-      return;
-    }
+    const scriptId = "google-identity-script";
 
-    // init
-    window.google.accounts.id.initialize({
-      client_id: GOOGLE_CLIENT_ID,
-      callback: handleGoogleResponse,
-    });
+    function initializeGoogle() {
+      if (
+        !window.google ||
+        !window.google.accounts ||
+        !window.google.accounts.id
+      ) {
+        console.warn("Google Identity belum tersedia di window");
+        return;
+      }
 
-    // render button ke dalam div dengan id 'googleSignInDiv'
-    const btnDiv = document.getElementById("googleSignInDiv");
-    if (btnDiv) {
-      window.google.accounts.id.renderButton(btnDiv, {
-        theme: "outline",
-        size: "large",
-        width: "100%",
-        shape: "pill",
+      window.google.accounts.id.initialize({
+        client_id: GOOGLE_CLIENT_ID,
+        callback: handleGoogleResponse,
       });
-    }
-  }, []);
 
+      const btnDiv = document.getElementById("googleSignInDiv");
+      if (btnDiv) {
+        window.google.accounts.id.renderButton(btnDiv, {
+          theme: "outline",
+          size: "large",
+          width: 320, // HARUS angka, bukan "100%"
+          shape: "pill",
+        });
+        // optional: otomatis munculkan One Tap
+        // window.google.accounts.id.prompt();
+      }
+    }
+
+    // kalau script belum ada → buat
+    if (!document.getElementById(scriptId)) {
+      const script = document.createElement("script");
+      script.id = scriptId;
+      script.src = "https://accounts.google.com/gsi/client";
+      script.async = true;
+      script.defer = true;
+      script.onload = initializeGoogle;
+      document.body.appendChild(script);
+    } else {
+      // script sudah ada → langsung init
+      initializeGoogle();
+    }
+  }, [handleGoogleResponse]);
+
+  // --------------------------
+  // RENDER UI
+  // --------------------------
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
       <div className="w-full max-w-md bg-white rounded-lg shadow p-6">

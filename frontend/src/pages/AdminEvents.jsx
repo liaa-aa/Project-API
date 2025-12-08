@@ -7,11 +7,13 @@ import {
   updateEvent,
   deleteEvent,
 } from "../api/adminApi";
+import CitySelect from "../components/CitySelect";
 
 export default function AdminEvents() {
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [successMsg, setSuccessMsg] = useState("");
 
   const [form, setForm] = useState({
     id: null,
@@ -20,23 +22,21 @@ export default function AdminEvents() {
     location: "",
     type: "",
     date: "",
-    maxVolunteers: "", // <--- tambahan
+    maxVolunteers: "",
   });
+  const [isEditing, setIsEditing] = useState(false);
 
-
-  const [submitting, setSubmitting] = useState(false);
-  const [successMsg, setSuccessMsg] = useState("");
-
-  const isEditing = !!form.id;
-
+  // =======================
+  // LOAD EVENTS (GraphQL: getBencana via adminFetchEvents)
+  // =======================
   const loadEvents = async () => {
     setLoading(true);
     setError("");
     try {
       const data = await adminFetchEvents();
-      setEvents(data);
+      setEvents(data || []);
     } catch (err) {
-      setError(err.message || "Gagal memuat daftar event");
+      setError(err.message || "Gagal memuat event");
     } finally {
       setLoading(false);
     }
@@ -56,347 +56,302 @@ export default function AdminEvents() {
       date: "",
       maxVolunteers: "",
     });
+    setIsEditing(false);
+    setError("");
+    setSuccessMsg("");
   };
-
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setForm((prev) => ({ ...prev, [name]: value }));
+    setForm((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
   };
 
-  const handleEditClick = (event) => {
-    setForm({
-      id: event.id,
-      title: event.title || "",
-      description: event.description || "",
-      location: event.location || "",
-      type: event.type || "",
-      // tanggal dari BE biasanya ISO, ambil bagian YYYY-MM-DD untuk input type="date"
-      date: event.date ? event.date.slice(0, 10) : "",
-      maxVolunteers:
-        typeof event.maxVolunteers === "number"
-          ? String(event.maxVolunteers)
-          : "",
-    });
-    setSuccessMsg("");
+  const handleLocationChange = (value) => {
+    setForm((prev) => ({
+      ...prev,
+      location: value,
+    }));
   };
 
-
-  const handleDeleteClick = async (eventId) => {
-    if (!window.confirm("Yakin ingin menghapus event ini?")) return;
-
-    try {
-      await deleteEvent(eventId);
-      setSuccessMsg("Event berhasil dihapus");
-      await loadEvents();
-    } catch (err) {
-      alert(err.message || "Gagal menghapus event");
-    }
-  };
-
+  // =======================
+  // SUBMIT CREATE / UPDATE (GraphQL: createBencana / updateBencana)
+  // =======================
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setSubmitting(true);
     setError("");
     setSuccessMsg("");
 
+    if (!form.title || !form.location || !form.type || !form.date) {
+      setError("Judul, lokasi, tipe, dan tanggal wajib diisi.");
+      return;
+    }
+
+    const maxVol = parseInt(form.maxVolunteers, 10);
+    if (!Number.isFinite(maxVol) || maxVol <= 0) {
+      setError("Maksimal pendaftar harus angka lebih dari 0.");
+      return;
+    }
+
+    const payload = {
+      title: form.title,
+      description: form.description,
+      location: form.location, // sudah format "Kota, ID"
+      type: form.type,
+      date: form.date, // string YYYY-MM-DD → backend sudah handle
+      maxVolunteers: maxVol,
+    };
+
     try {
-      const maxVol = parseInt(form.maxVolunteers, 10);
-      if (!Number.isFinite(maxVol) || maxVol <= 0) {
-        throw new Error("Maksimal pendaftar harus angka lebih dari 0");
-      }
-
-      const payload = {
-        title: form.title,
-        description: form.description,
-        location: form.location,
-        type: form.type,
-        // kirim langsung YYYY-MM-DD; Date di backend bisa parse ini
-        date: form.date,
-        maxVolunteers: maxVol,
-      };
-
-      if (isEditing) {
+      if (isEditing && form.id) {
         await updateEvent(form.id, payload);
-        setSuccessMsg("Event berhasil diperbarui");
+        setSuccessMsg("Event berhasil diperbarui.");
       } else {
         await createEvent(payload);
-        setSuccessMsg("Event baru berhasil dibuat");
+        setSuccessMsg("Event baru berhasil dibuat.");
       }
-
       resetForm();
       await loadEvents();
     } catch (err) {
-      setError(err.message || "Gagal menyimpan event");
-    } finally {
-      setSubmitting(false);
+      setError(err.message || "Gagal menyimpan event.");
     }
   };
 
+  // =======================
+  // EDIT / DELETE
+  // =======================
+  const handleEditClick = (ev) => {
+    setForm({
+      id: ev.id,
+      title: ev.title || "",
+      description: ev.description || "",
+      location: ev.location || "",
+      type: ev.type || "",
+      date: ev.date ? ev.date.slice(0, 10) : "",
+      maxVolunteers: ev.maxVolunteers?.toString() || "",
+    });
+    setIsEditing(true);
+    setError("");
+    setSuccessMsg("");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
 
+  const handleDeleteClick = async (id) => {
+    if (!window.confirm("Yakin ingin menghapus event ini?")) return;
+
+    try {
+      await deleteEvent(id);
+      setSuccessMsg("Event berhasil dihapus.");
+      await loadEvents();
+    } catch (err) {
+      setError(err.message || "Gagal menghapus event.");
+    }
+  };
+
+  const formatDate = (dateStr) => {
+    if (!dateStr) return "-";
+    const d = new Date(dateStr);
+    if (Number.isNaN(d.getTime())) return dateStr;
+    return d.toLocaleDateString("id-ID", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    });
+  };
+
+  // =======================
+  // RENDER
+  // =======================
   return (
-    <div className="max-w-5xl mx-auto p-4">
-      <h1 className="text-2xl font-bold mb-4">Kelola Event (Admin)</h1>
-
-      {/* FORM CREATE / EDIT */}
-      <div className="mb-6 border rounded-lg p-4 shadow-sm bg-white">
-        <h2 className="text-lg font-semibold mb-3">
-          {isEditing ? "Edit Event" : "Buat Event Baru"}
-        </h2>
-
-        {error && <p className="text-red-600 mb-2">{error}</p>}
-        {successMsg && <p className="text-green-600 mb-2">{successMsg}</p>}
-
-        <form onSubmit={handleSubmit} className="space-y-3">
+    <div className="p-6 bg-slate-50 min-h-screen">
+      <div className="max-w-5xl mx-auto space-y-6">
+        {/* HEADER */}
+        <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div>
-            <label className="block text-sm font-medium mb-1">Judul</label>
-            <input
-              type="text"
-              name="title"
-              value={form.title}
-              onChange={handleChange}
-              className="w-full border rounded px-2 py-1 text-sm"
-              required
-            />
+            <h1 className="text-2xl font-bold text-slate-800">
+              Manajemen Event
+            </h1>
+            <p className="text-sm text-slate-500">
+              Kelola data bencana dan kegiatan relawan.
+            </p>
           </div>
+        </header>
 
-          <div>
-            <label className="block text-sm font-medium mb-1">Deskripsi</label>
-            <textarea
-              name="description"
-              value={form.description}
-              onChange={handleChange}
-              className="w-full border rounded px-2 py-1 text-sm"
-              rows={3}
-            />
-          </div>
+        {/* FORM CREATE / EDIT */}
+        <section className="border rounded-2xl p-5 bg-white shadow-sm">
+          <h2 className="text-lg font-semibold mb-3">
+            {isEditing ? "Edit Event" : "Buat Event Baru"}
+          </h2>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          {error && <p className="text-sm text-red-600 mb-2">{error}</p>}
+          {successMsg && (
+            <p className="text-sm text-green-600 mb-2">{successMsg}</p>
+          )}
+
+          <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium mb-1">Lokasi</label>
+              <label className="block text-sm font-medium mb-1">Judul</label>
               <input
                 type="text"
-                name="location"
-                value={form.location}
+                name="title"
+                value={form.title}
                 onChange={handleChange}
-                className="w-full border rounded px-2 py-1 text-sm"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-1">Tipe</label>
-              <input
-                type="text"
-                name="type"
-                value={form.type}
-                onChange={handleChange}
-                className="w-full border rounded px-2 py-1 text-sm"
-                placeholder="bencana alam, sosial, dll"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-1">Tanggal</label>
-              <input
-                type="date"
-                name="date"
-                value={form.date}
-                onChange={handleChange}
-                className="w-full border rounded px-2 py-1 text-sm"
+                className="w-full border rounded px-3 py-2 text-sm"
+                placeholder="Contoh: Banjir Banda Aceh"
+                required
               />
             </div>
 
             <div>
               <label className="block text-sm font-medium mb-1">
-                Maksimal Pendaftar (Relawan)
+                Deskripsi
               </label>
-              <input
-                type="number"
-                name="maxVolunteers"
-                min="1"
-                value={form.maxVolunteers}
+              <textarea
+                name="description"
+                value={form.description}
                 onChange={handleChange}
-                className="w-full border rounded px-2 py-1 text-sm"
-                placeholder="contoh: 50"
-                required
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div>
-              <label className="block text-sm font-medium mb-1">Lokasi</label>
-              <input
-                type="text"
-                name="location"
-                value={form.location}
-                onChange={handleChange}
-                className="w-full border rounded px-2 py-1 text-sm"
+                className="w-full border rounded px-3 py-2 text-sm"
+                rows={3}
+                placeholder="Tuliskan detail kegiatan, kebutuhan, dan informasi penting."
               />
             </div>
 
-            <div>
-              <label className="block text-sm font-medium mb-1">Tipe</label>
-              <input
-                type="text"
-                name="type"
-                value={form.type}
-                onChange={handleChange}
-                className="w-full border rounded px-2 py-1 text-sm"
-                placeholder="bencana alam, sosial, dll"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-1">Tanggal</label>
-              <input
-                type="date"
-                name="date"
-                value={form.date}
-                onChange={handleChange}
-                className="w-full border rounded px-2 py-1 text-sm"
-              />
-            </div>
-          </div>
-
-          {/* Tambahan: maksimal pendaftar */}
-          <div>
-            <label className="block text-sm font-medium mb-1">
-              Maksimal Pendaftar (Relawan)
-            </label>
-            <input
-              type="number"
-              name="maxVolunteers"
-              min="1"
-              value={form.maxVolunteers}
-              onChange={handleChange}
-              className="w-full border rounded px-2 py-1 text-sm"
-              placeholder="contoh: 50"
-              required
-            />
-          </div>
-
-          <div className="flex items-center gap-2 mt-2">
-            <button
-              type="submit"
-              disabled={submitting}
-              className="px-3 py-1 rounded bg-blue-600 text-white text-sm disabled:opacity-60"
-            >
-              {submitting
-                ? "Menyimpan..."
-                : isEditing
-                ? "Simpan Perubahan"
-                : "Buat Event"}
-            </button>
-
-            {isEditing && (
-              <button
-                type="button"
-                onClick={resetForm}
-                className="px-3 py-1 rounded border text-sm"
-              >
-                Batal Edit
-              </button>
-            )}
-          </div>
-        </form>
-      </div>
-
-      {/* LIST EVENT */}
-      <div className="border rounded-lg p-4 shadow-sm bg-white">
-        <h2 className="text-lg font-semibold mb-3">Daftar Event</h2>
-
-        {loading && <p>Memuat daftar event...</p>}
-
-        {!loading && events.length === 0 && (
-          <p>Belum ada event. Silakan buat event baru.</p>
-        )}
-
-        {!loading && events.length > 0 && (
-          <div className="grid gap-3 md:grid-cols-2">
-            {events.map((ev) => (
-              <div
-                key={ev.id}
-                className="border rounded-lg p-3 flex flex-col justify-between"
-              >
-                <div>
-                  <h3 className="text-sm font-semibold mb-1">{ev.title}</h3>
-                  <p className="text-xs text-gray-600 mb-1">
-                    {ev.description || "-"}
-                  </p>
-                  <p className="text-xs text-gray-600">
-                    <span className="font-medium">Lokasi:</span>{" "}
-                    {ev.location || "-"}
-                  </p>
-                  <p className="text-xs text-gray-600">
-                    <span className="font-medium">Tipe:</span> {ev.type || "-"}
-                  </p>
-                  <p className="text-xs text-gray-600">
-                    <span className="font-medium">Tanggal:</span>{" "}
-                    {ev.date ? new Date(ev.date).toLocaleDateString() : "-"}
-                  </p>
-                  {typeof ev.maxVolunteers === "number" && (
-                    <p className="text-xs text-gray-600">
-                      <span className="font-medium">Maksimal pendaftar:</span>{" "}
-                      {ev.maxVolunteers} relawan
-                    </p>
-                  )}
-                  {typeof ev.currentVolunteers === "number" && (
-                    <p className="text-xs text-gray-600">
-                      <span className="font-medium">Jumlah pendaftar:</span>{" "}
-                      {ev.currentVolunteers}
-                      {typeof ev.maxVolunteers === "number" && (
-                        <> / {ev.maxVolunteers}</>
-                      )}{" "}
-                      relawan
-                    </p>
-                  )}
-                </div>
-
-                <div>
-                  <h3 className="text-sm font-semibold mb-1">{ev.title}</h3>
-                  <p className="text-xs text-gray-600 mb-1">
-                    {ev.description || "-"}
-                  </p>
-                  <p className="text-xs text-gray-600">
-                    <span className="font-medium">Lokasi:</span>{" "}
-                    {ev.location || "-"}
-                  </p>
-                  <p className="text-xs text-gray-600">
-                    <span className="font-medium">Tipe:</span> {ev.type || "-"}
-                  </p>
-                  <p className="text-xs text-gray-600">
-                    <span className="font-medium">Tanggal:</span>{" "}
-                    {ev.date ? new Date(ev.date).toLocaleDateString() : "-"}
-                  </p>
-                  {typeof ev.maxVolunteers === "number" && (
-                    <p className="text-xs text-gray-600">
-                      <span className="font-medium">Maksimal pendaftar:</span>{" "}
-                      {ev.maxVolunteers} relawan
-                    </p>
-                  )}
-                </div>
-
-                <div className="mt-3 flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() => handleEditClick(ev)}
-                    className="px-3 py-1 rounded bg-yellow-500 text-white text-xs"
-                  >
-                    Edit
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleDeleteClick(ev.id)}
-                    className="px-3 py-1 rounded bg-red-600 text-white text-xs"
-                  >
-                    Hapus
-                  </button>
-                </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="sm:col-span-1">
+                <CitySelect
+                  label="Lokasi (Kota)"
+                  value={form.location}
+                  onChange={handleLocationChange}
+                />
               </div>
-            ))}
-          </div>
-        )}
+
+              <div>
+                <label className="block text-sm font-medium mb-1">Tipe</label>
+                <input
+                  type="text"
+                  name="type"
+                  value={form.type}
+                  onChange={handleChange}
+                  className="w-full border rounded px-3 py-2 text-sm"
+                  placeholder="bencana alam, sosial, dll"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-1">
+                  Tanggal
+                </label>
+                <input
+                  type="date"
+                  name="date"
+                  value={form.date}
+                  onChange={handleChange}
+                  className="w-full border rounded px-3 py-2 text-sm"
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">
+                  Maksimal Pendaftar (Relawan)
+                </label>
+                <input
+                  type="number"
+                  name="maxVolunteers"
+                  min="1"
+                  value={form.maxVolunteers}
+                  onChange={handleChange}
+                  className="w-full border rounded px-3 py-2 text-sm"
+                  placeholder="contoh: 50"
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-3 pt-2">
+              <button
+                type="submit"
+                className="px-5 py-2 rounded-full bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition"
+              >
+                {isEditing ? "Simpan Perubahan" : "Buat Event"}
+              </button>
+              {isEditing && (
+                <button
+                  type="button"
+                  onClick={resetForm}
+                  className="px-4 py-2 rounded-full border border-slate-300 text-sm hover:bg-slate-100"
+                >
+                  Batal Edit
+                </button>
+              )}
+            </div>
+          </form>
+        </section>
+
+        {/* LIST EVENT */}
+        <section>
+          <h2 className="text-lg font-semibold mb-3">Daftar Event</h2>
+
+          {loading ? (
+            <p className="text-sm text-slate-500">Memuat data event...</p>
+          ) : events.length === 0 ? (
+            <p className="text-sm text-slate-500">
+              Belum ada event. Tambahkan event baru di atas.
+            </p>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {events.map((ev) => (
+                <div
+                  key={ev.id}
+                  className="bg-white border rounded-2xl shadow-sm p-4 flex flex-col justify-between"
+                >
+                  <div>
+                    <h3 className="text-base font-semibold text-slate-800">
+                      {ev.title}
+                    </h3>
+                    <p className="text-sm text-slate-500">
+                      {ev.location} • {formatDate(ev.date)}
+                    </p>
+                    <p className="text-xs text-slate-500 mt-1">
+                      Tipe: <span className="font-medium">{ev.type}</span>
+                    </p>
+                    <p className="text-xs text-slate-500 mt-1">
+                      Relawan:{" "}
+                      <span className="font-semibold">
+                        {ev.currentVolunteers || 0} / {ev.maxVolunteers || 0}
+                      </span>
+                    </p>
+                    <p className="text-sm text-slate-700 mt-2 line-clamp-2">
+                      {ev.description || "Tidak ada deskripsi."}
+                    </p>
+                  </div>
+
+                  <div className="flex justify-end gap-2 mt-3 pt-3 border-t">
+                    <button
+                      type="button"
+                      onClick={() => handleEditClick(ev)}
+                      className="px-3 py-1 rounded bg-slate-200 text-xs hover:bg-slate-300"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteClick(ev.id)}
+                      className="px-3 py-1 rounded bg-red-600 text-white text-xs hover:bg-red-700"
+                    >
+                      Hapus
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
       </div>
     </div>
   );

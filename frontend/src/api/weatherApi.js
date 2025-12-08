@@ -1,3 +1,4 @@
+// frontend/src/api/weatherApi.js
 const API_BASE_URL = "http://localhost:3333";
 
 // Ambil cuaca untuk suatu bencana berdasarkan ID bencana
