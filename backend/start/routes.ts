@@ -32,7 +32,7 @@ router
   .group(() => {
     router.post('/graphql', '#controllers/graphqlController.handle')
   })
-  .use(middleware.auth())
+  .use(middleware.optionalAuth())
 
 router.get('/weather', '#controllers/weatherController.getByCity')
 router.get('/weather/bencana/:id', '#controllers/weatherController.getByBencana')
