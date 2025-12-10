@@ -1,127 +1,169 @@
+// src/pages/Home.jsx
 import React from "react";
+import { Link } from "react-router-dom";
 import heroImage from "../assets/hero.png";
 
 const Home = () => {
   return (
-    <div className="pt-0 pb-15 bg-slate-50">
-      {/* ===== HERO SECTION (lebih modern) ===== */}
-      <section className="relative max-w-6xl mx-auto mt-4 rounded-2xl bg-gradient-to-r from-blue-600 via-sky-500 to-cyan-400 text-white shadow-md overflow-hidden px-6 py-10 md:px-10 md:py-14">
-        {/* dekorasi blur */}
-        <div className="pointer-events-none absolute -right-24 -top-24 h-64 w-64 rounded-full bg-white/10 blur-3xl" />
-        <div className="pointer-events-none absolute -left-24 bottom-0 h-52 w-52 rounded-full bg-blue-900/25 blur-2xl" />
+    <div className="min-h-screen bg-slate-50 pt-0 pb-16">
+      {/* ===== HERO SECTION ===== */}
+      <section className="relative max-w-6xl mx-auto mt-2">
+        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-blue-700 via-blue-800 to-blue-900 shadow-xl px-6 py-10 md:px-12 md:py-14">
+          {/* dekorasi blur */}
+          <div className="pointer-events-none absolute -right-24 -top-24 h-64 w-64 rounded-full bg-white/10 blur-3xl" />
+          <div className="pointer-events-none absolute -left-24 bottom-0 h-52 w-52 rounded-full bg-blue-900/25 blur-2xl" />
 
-        <div className="relative z-10 flex flex-col md:flex-row items-center gap-10">
-          {/* KIRI: TEKS */}
-          <div className="flex-1">
-            <span className="inline-flex items-center rounded-full bg-white/20 px-4 py-1 text-sm font-medium backdrop-blur">
-              Platform Relawan Indonesia
-            </span>
+          <div className="relative z-10 flex flex-col md:flex-row items-center gap-10">
+            {/* KIRI: TEKS */}
+            <div className="flex-1">
+              <span className="inline-flex items-center rounded-full bg-white/15 px-4 py-1 text-xs font-medium text-blue-50 backdrop-blur">
+                Platform Relawan Bencana • Indonesia
+              </span>
 
-            <h1 className="mt-4 text-3xl md:text-5xl font-bold leading-tight">
-              Selamat Datang di{" "}
-              <span className="text-yellow-300">Volunteer Event App</span>
-            </h1>
+              <h1 className="mt-3 text-3xl md:text-4xl font-bold text-white leading-tight">
+                Bantu Sesama,{" "}
+                <span className="text-yellow-300">Dimulai dari Satu Aksi</span>
+              </h1>
 
-            <p className="mt-4 text-blue-50 text-base md:text-lg max-w-xl">
-              Yuk ikut kegiatan sosial dan bareng-bareng bikin perubahan kecil
-              yang berarti.
-            </p>
+              <p className="mt-3 text-sm md:text-base text-blue-50/90 max-w-xl">
+                VolunteerEvent menghubungkan relawan dengan berbagai kegiatan
+                penanggulangan bencana di seluruh Indonesia. Daftar, pilih
+                event, dan mulai bergerak bersama.
+              </p>
 
-            <div className="mt-6 flex flex-wrap items-center gap-4">
-              <button
-                onClick={() => (window.location.href = "/events")}
-                className="px-6 py-3 bg-white text-blue-600 rounded-lg text-sm md:text-base font-semibold hover:bg-blue-50 shadow"
-              >
-                Lihat Kegiatan
-              </button>
+              <div className="mt-6 flex flex-wrap items-center gap-3">
+                <Link
+                  to="/events"
+                  className="inline-flex items-center justify-center rounded-2xl bg-white px-5 py-2.5 text-sm font-semibold text-blue-800 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition"
+                >
+                  Lihat Event
+                  <span className="ml-2 text-base">→</span>
+                </Link>
 
-              <button
-                onClick={() => (window.location.href = "/login")}
-                className="px-6 py-3 border border-white/70 text-white rounded-lg text-sm md:text-base font-medium hover:bg-white/10"
-              >
-                Daftar Jadi Relawan
-              </button>
+                <Link
+                  to="/register"
+                  className="inline-flex items-center justify-center rounded-2xl border border-white/40 px-4 py-2 text-xs md:text-sm font-medium text-white hover:bg-white/10 transition"
+                >
+                  Daftar Sebagai Relawan
+                </Link>
+              </div>
+
+              <div className="mt-6 grid grid-cols-3 gap-4 max-w-md text-xs text-blue-50/90">
+                <div>
+                  <p className="font-semibold text-white">+100</p>
+                  <p>Relawan aktif</p>
+                </div>
+                <div>
+                  <p className="font-semibold text-white">+20</p>
+                  <p>Event penanggulangan</p>
+                </div>
+                <div>
+                  <p className="font-semibold text-white">24/7</p>
+                  <p>Dukungan platform</p>
+                </div>
+              </div>
             </div>
-          </div>
 
-          {/* KANAN: GAMBAR DALAM CARD */}
-          <div className="flex-1 flex justify-center">
-            <div className="relative rounded-2xl bg-white shadow-2xl p-2 md:p-3">
-              <img
-                src={heroImage}
-                alt="Relawan membantu"
-                className="w-full max-w-md rounded-xl object-cover"
-              />
-
-              <div className="absolute bottom-3 left-3 right-3 rounded-xl bg-white/80 px-3 py-2 text-xs md:text-sm text-blue-900 shadow-md">
-                <p className="flex justify-center font-semibold">Aksi Cepat Bantu Sesama</p>
+            {/* KANAN: GAMBAR */}
+            <div className="flex-1 flex justify-center">
+              <div className="relative w-full max-w-sm">
+                <div className="absolute -inset-4 rounded-3xl bg-blue-900/40 blur-xl" />
+                <img
+                  src={heroImage}
+                  alt="Relawan membantu di lokasi bencana"
+                  className="relative rounded-3xl shadow-2xl border border-white/10 w-full h-auto object-cover"
+                />
               </div>
             </div>
           </div>
         </div>
       </section>
 
-      <section className="relative max-h-96 max-w-6xl mx-auto mt-9 text-center px-6 py-20 overflow-hidden">
-        {/* ===== DECORATION LEFT ===== */}
-        {/* Bulatan besar kiri */}
-        <div className="absolute left-10 mt-2 bottom-5 w-48 h-48 bg-yellow-200 opacity-40 rounded-full hidden md:block" />
+      {/* ===== SECTION: CARA KERJA ===== */}
+      <section className="max-w-6xl mx-auto mt-12 px-4">
+        <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mb-6">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wide text-blue-600">
+              Cara Kerja
+            </p>
+            <h2 className="mt-1 text-xl md:text-2xl font-bold text-slate-900">
+              Mulai dalam beberapa langkah sederhana
+            </h2>
+            <p className="mt-1 text-sm text-slate-500 max-w-xl">
+              Kami merancang alur pendaftaran yang mudah agar kamu bisa fokus
+              pada aksi, bukan administrasi.
+            </p>
+          </div>
+        </div>
 
-        {/* Ring putus-putus kiri */}
-        <div className="absolute left-30 top-7 w-25 h-25 rounded-full border-4 border-dashed border-blue-200 opacity-70 hidden md:block" />
-
-        {/* ===== DECORATION RIGHT ===== */}
-        {/* Bulatan besar kanan (diperkecil) */}
-        <div className="absolute right-13 bottom-0 w-48 h-48 bg-cyan-200 opacity-40 rounded-full hidden md:block" />
-
-        {/* Ring putus-putus kanan (diperkecil) */}
-        <div className="absolute right-25 top-7 w-24 h-24 rounded-full border-4 border-dashed border-blue-400 opacity-60 hidden md:block" />
-
-        {/* Ring putus-putus tambahan kanan (yang kamu minta) */}
-        <div className="absolute right-5 top-32 w-20 h-20 rounded-full border-2 border-dashed border-blue-300 opacity-50 hidden md:block" />
-
-        <div className="relative z-10">
-          <h2 className="text-3xl font-bold text-gray-800 mb-4">
-            Bergabunglah Menjadi Relawan
-          </h2>
-          <p className="text-gray-600 text-lg max-w-3xl mx-auto">
-            Kami percaya bahwa setiap orang dapat memberi dampak positif. Yuk
-            ikut berkontribusi lewat berbagai kegiatan sosial, lingkungan, dan
-            kemanusiaan.
-          </p>
+        <div className="grid gap-4 md:grid-cols-3">
+          <StepCard
+            number="1"
+            title="Buat Akun Relawan"
+            desc="Daftar dengan email atau akun Google. Lengkapi profil dan minat lokasi."
+          />
+          <StepCard
+            number="2"
+            title="Pilih Event yang Tersedia"
+            desc="Telusuri daftar event bencana, lihat detail kebutuhan, dan kuota relawan."
+          />
+          <StepCard
+            number="3"
+            title="Datang & Berkontribusi"
+            desc="Ikuti arahan koordinator lapangan dan berikan dampak nyata bagi sesama."
+          />
         </div>
       </section>
 
-      {/* ===== FEATURE CARDS ===== */}
-      <section className="max-w-6xl mx-auto mt-12 grid grid-cols-1 md:grid-cols-3 gap-8 px-6 pb-6">
-        <div className="bg-white shadow-lg rounded-xl p-6 hover:shadow-xl transition">
-          <h3 className="text-xl font-semibold text-blue-700 mb-2">
-            Membantu Sesama
-          </h3>
-          <p className="text-gray-600">
-            Jadilah bagian dari perubahan di lingkungan kamu dengan aksi nyata.
-          </p>
-        </div>
-        
-        <div className="bg-white shadow-lg rounded-xl p-6 hover:shadow-xl transition">
-          <h3 className="text-xl font-semibold text-blue-700 mb-2">
-            Event Fleksibel
-          </h3>
-          <p className="text-gray-600">
-            Pilih kegiatan sesuai lokasi, jadwal, dan minat kamu.
-          </p>
+      {/* ===== SECTION: MANFAAT BERGABUNG ===== */}
+      <section className="max-w-6xl mx-auto mt-12 px-4">
+        <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mb-6">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wide text-blue-600">
+              Mengapa VolunteerEvent?
+            </p>
+            <h2 className="mt-1 text-xl md:text-2xl font-bold text-slate-900">
+              Manfaat bergabung sebagai relawan
+            </h2>
+          </div>
         </div>
 
-        <div className="bg-white shadow-lg rounded-xl p-6 hover:shadow-xl transition">
-          <h3 className="text-xl font-semibold text-blue-700 mb-2">
-            Bertemu Relawan Baru
-          </h3>
-          <p className="text-gray-600">
-            Berjejaring dengan komunitas positif dan relawan inspiratif.
-          </p>
+        <div className="grid gap-5 md:grid-cols-3">
+          <BenefitCard
+            title="Terhubung dengan Kegiatan Nyata"
+            desc="Ikut serta dalam penanganan bencana yang benar-benar membutuhkan bantuan di lapangan."
+          />
+          <BenefitCard
+            title="Pengalaman & Jejaring Baru"
+            desc="Bertemu relawan dari berbagai latar belakang dan bangun jejaring sosial yang positif."
+          />
+          <BenefitCard
+            title="Platform Terpusat & Transparan"
+            desc="Semua informasi event, kebutuhan relawan, dan status pendaftaran dalam satu platform."
+          />
         </div>
       </section>
     </div>
   );
 };
+
+const StepCard = ({ number, title, desc }) => (
+  <div className="bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition transform p-5">
+    <div className="flex items-center gap-3 mb-3">
+      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-50 text-blue-700 text-sm font-semibold">
+        {number}
+      </div>
+      <h3 className="text-sm font-semibold text-slate-900">{title}</h3>
+    </div>
+    <p className="text-xs text-slate-600 leading-relaxed">{desc}</p>
+  </div>
+);
+
+const BenefitCard = ({ title, desc }) => (
+  <div className="bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition transform p-5">
+    <h3 className="text-sm font-semibold text-slate-900 mb-2">{title}</h3>
+    <p className="text-xs text-slate-600 leading-relaxed">{desc}</p>
+  </div>
+);
 
 export default Home;

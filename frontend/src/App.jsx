@@ -31,7 +31,7 @@ function App() {
       {/* Navbar hanya untuk halaman publik/user */}
       {!isAdminRoute && <Navbar />}
 
-      <main className={isAdminRoute ? "flex-1" : "flex-1 pt-11"}>
+      <main className={isAdminRoute ? "flex-1" : "flex-1 pt-0"}>
         <Routes>
           {/* ROUTE PUBLIK & USER */}
           <Route path="/" element={<Home />} />

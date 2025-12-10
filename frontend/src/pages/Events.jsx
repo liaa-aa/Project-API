@@ -14,7 +14,7 @@ export default function Events() {
       setError("");
 
       try {
-        const data = await getEvents();
+        const data = await getEvents(); // <- pakai API GraphQL yang sudah ada
         setEvents(Array.isArray(data) ? data : []);
       } catch (err) {
         setError(err.message || "Gagal memuat event");
@@ -27,89 +27,155 @@ export default function Events() {
   }, []);
 
   return (
-    <div className="max-w-4xl pt-9 mx-auto mt-8 mb-9">
-      <h1 className="text-2xl font-bold mb-4">Volunteer Events</h1>
+    <div className="min-h-screen bg-slate-50">
+      <div className="max-w-6xl mx-auto px-4 pt-10 pb-16">
+        {/* Header */}
+        <header className="mb-8">
+          <p className="text-xs font-semibold uppercase tracking-wide text-blue-600">
+            Daftar Kegiatan
+          </p>
+          <h1 className="mt-1 text-2xl md:text-3xl font-bold text-slate-900">
+            Event &amp; Bencana yang Sedang Berlangsung
+          </h1>
+          <p className="mt-2 text-sm text-slate-500 max-w-2xl">
+            Temukan kegiatan relawan yang dapat kamu ikuti untuk membantu sesama
+            dan menyalurkan kepedulianmu.
+          </p>
+        </header>
 
-      {error && (
-        <div className="mb-4 text-sm text-red-600 bg-red-50 border border-red-200 p-2 rounded">
-          {error}
-        </div>
-      )}
+        {/* Error */}
+        {error && !loading && (
+          <div className="mb-4 text-sm text-red-700 bg-red-50 border border-red-200 px-4 py-3 rounded-xl">
+            {error}
+          </div>
+        )}
 
-      {loading ? (
-        <p className="text-gray-600">Memuat event...</p>
-      ) : events.length === 0 ? (
-        <p className="text-gray-600">Belum ada event.</p>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {events.map((ev) => {
-            const max = Number(ev.maxVolunteers);
-            const current = Number(ev.currentVolunteers);
+        {/* Loading / kosong / daftar event */}
+        {loading ? (
+          <div className="flex justify-center items-center py-16">
+            <p className="text-sm text-slate-500">Memuat data event...</p>
+          </div>
+        ) : events.length === 0 ? (
+          <div className="bg-white border border-slate-100 rounded-2xl shadow-sm px-5 py-8 text-center">
+            <p className="text-sm font-medium text-slate-700">
+              Belum ada event yang tersedia saat ini.
+            </p>
+            <p className="mt-1 text-xs text-slate-500">
+              Silakan cek kembali beberapa saat lagi.
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-6">
+            {events.map((ev) => {
+              const id = ev.id || ev._id;
 
-            const hasMax = Number.isFinite(max) && max > 0;
-            const hasCurrent = Number.isFinite(current) && current >= 0;
+              const max = Number(ev.maxVolunteers);
+              const current = Number(ev.currentVolunteers);
 
-            const isFull = hasMax && hasCurrent && current >= max;
+              const hasMax = Number.isFinite(max) && max > 0;
+              const hasCurrent = Number.isFinite(current) && current >= 0;
 
-            const remaining = hasMax && hasCurrent ? max - current : null;
+              const isFull = hasMax && hasCurrent && current >= max;
+              const remaining = hasMax && hasCurrent ? max - current : null;
 
-            return (
-              <Link
-                key={ev._id || ev.id}
-                to={`/events/${ev._id || ev.id}`}
-                className="border p-4 rounded shadow hover:shadow-md transition bg-white"
-              >
-                <h2 className="font-bold text-lg mb-1">{ev.title}</h2>
-                <p className="text-gray-600">{ev.location}</p>
+              return (
+                <Link
+                  key={id}
+                  to={`/events/${id}`}
+                  className="group bg-white rounded-2xl shadow-md border border-slate-100 p-5
+                             hover:shadow-lg hover:-translate-y-0.5 transition transform flex flex-col gap-3"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <h2 className="font-semibold text-base md:text-lg text-slate-900 group-hover:text-blue-700">
+                        {ev.title}
+                      </h2>
 
-                <p className="text-xs text-gray-500 mt-1">
-                  Jenis: {ev.type || "-"}
-                </p>
+                      {ev.location && (
+                        <p className="mt-1 text-xs text-slate-500">
+                          {ev.location}
+                        </p>
+                      )}
 
-                {ev.date && (
-                  <p className="text-xs text-gray-500">
-                    Tanggal:{" "}
-                    {new Date(ev.date).toLocaleDateString(undefined, {
-                      day: "2-digit",
-                      month: "short",
-                      year: "numeric",
-                    })}
-                  </p>
-                )}
+                      {ev.type && (
+                        <p className="mt-1 text-xs text-slate-500">
+                          Jenis: {ev.type}
+                        </p>
+                      )}
 
-                {hasMax && (
-                  <p className="text-xs text-gray-500">
-                    Maksimal relawan:{" "}
-                    <span className="font-semibold">{max}</span>
-                  </p>
-                )}
+                      {ev.date && (
+                        <p className="mt-1 text-xs text-slate-500">
+                          {" "}
+                          {new Date(ev.date).toLocaleDateString(undefined, {
+                            day: "2-digit",
+                            month: "short",
+                            year: "numeric",
+                          })}
+                        </p>
+                      )}
+                    </div>
 
-                {hasCurrent && (
-                  <p className="text-xs text-gray-700 mt-1">
-                    Pendaftar:{" "}
-                    <span className="font-semibold">
-                      {current}
-                      {hasMax && <> / {max}</>} relawan
+                    {/* Badge status */}
+                    <span
+                      className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold
+                        ${
+                          isFull
+                            ? "bg-red-50 text-red-700 border border-red-100"
+                            : "bg-emerald-50 text-emerald-700 border border-emerald-100"
+                        }`}
+                    >
+                      {isFull ? "Penuh" : "Terbuka"}
                     </span>
-                  </p>
-                )}
+                  </div>
 
-                {hasMax && hasCurrent && (
-                  <p
-                    className={`text-xs mt-1 ${
-                      isFull ? "text-red-600" : "text-green-600"
-                    }`}
-                  >
-                    {isFull
-                      ? "Event penuh"
-                      : `Slot tersisa: ${remaining} relawan`}
-                  </p>
-                )}
-              </Link>
-            );
-          })}
-        </div>
-      )}
+                  {/* Deskripsi */}
+                  {ev.description && (
+                    <p className="text-sm text-slate-600 line-clamp-2">
+                      {ev.description}
+                    </p>
+                  )}
+
+                  {/* Info kuota */}
+                  <div className="mt-2 flex flex-wrap items-center justify-between gap-3 text-xs text-slate-500">
+                    {hasMax && (
+                      <span>
+                        Kuota: <span className="font-medium">{current}</span>/
+                        <span className="font-medium">{max}</span> relawan
+                      </span>
+                    )}
+
+                    {hasCurrent && !hasMax && (
+                      <span>
+                        Pendaftar:{" "}
+                        <span className="font-medium">{current}</span> relawan
+                      </span>
+                    )}
+
+                    {typeof remaining === "number" && !isFull && (
+                      <span className="font-medium text-emerald-600">
+                        Slot tersisa: {remaining}
+                      </span>
+                    )}
+
+                    {isFull && (
+                      <span className="font-medium text-red-600">
+                        Event sudah penuh
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="mt-3 flex justify-end">
+                    <span className="inline-flex items-center text-xs font-medium text-blue-700 group-hover:text-blue-800">
+                      Lihat detail
+                      <span className="ml-1">→</span>
+                    </span>
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

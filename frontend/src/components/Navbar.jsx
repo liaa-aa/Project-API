@@ -7,7 +7,6 @@ const Navbar = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // simpan user di state supaya UI bisa berubah ketika logout/login
   const [user, setUser] = useState(null);
 
   // Baca ulang user dari localStorage setiap kali URL berubah
@@ -24,81 +23,111 @@ const Navbar = () => {
       setUser(parsed);
     } catch (e) {
       console.error("Gagal parse user dari localStorage", e);
+      localStorage.removeItem("user");
       setUser(null);
     }
-  }, [location]); // <-- jalan lagi tiap route berubah (termasuk setelah navigate)
+  }, [location.pathname]);
 
   const handleLogout = () => {
-    // bersihkan localStorage
     localStorage.removeItem("token");
     localStorage.removeItem("user");
-
-    // reset state user supaya navbar LANGSUNG berubah
     setUser(null);
-
-    // pindah ke halaman login
     navigate("/login");
   };
 
+  const isActive = (path, exact = false) => {
+    if (exact) return location.pathname === path;
+    return location.pathname.startsWith(path);
+  };
+
   return (
-    <nav className="fixed top-0 left-0 w-full bg-white z-50 shadow">
-      <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
-        <Link to="/" className="text-xl font-bold text-blue-600">
-          VolunteerEvent
-        </Link>
-
-        <div className="flex items-center gap-4">
-          {/* HOME */}
-          <Link to="/" className="hover:text-blue-600">
-            Home
+    <nav className="mb-0 sticky top-0 left-0 w-full z-50 bg-gradient-to-r from-blue-700 via-blue-800 to-blue-900 shadow-lg">
+      <div className="max-w-7xl mx-auto px-4 lg:px-6">
+        <div className="flex items-center justify-between py-3">
+          {/* LOGO + BRAND */}
+          <Link to="/" className="flex items-center gap-2">
+            {/* Logo SVG: letakkan file di frontend/public/logo.svg */}
+            <img
+              src="/logo.svg"
+              alt="Logo"
+              className="w-8 h-8 object-contain"
+            />
+            <span className="text-white font-semibold text-lg tracking-wide">
+              VolunteerEvent
+            </span>
           </Link>
 
-          <Link to="/events" className="hover:text-blue-600">
-            Events
-          </Link>
+          {/* MENU */}
+          <div className="flex items-center gap-4 text-sm">
+            {/* Home */}
+            <NavItem to="/" active={isActive("/", true)}>
+              Home
+            </NavItem>
 
-          {user ? (
-            <>
-              {/* Menu khusus admin */}
-              {user.role === "admin" && (
-                <>
-                  <Link to="/admin/volunteers" className="hover:text-blue-600">
-                    Admin Volunteers
-                  </Link>
-                  <Link to="/admin/events" className="hover:text-blue-600">
-                    Admin Events
-                  </Link>
-                  <Link to="/admin/users" className="hover:text-blue-600">
-                    Admin Users
-                  </Link>
-                </>
-              )}
+            {/* Events */}
+            <NavItem to="/events" active={isActive("/events")}>
+              Events
+            </NavItem>
 
-              <Link to="/profile" className="hover:text-blue-600">
-                Profil
-              </Link>
+            {/* Admin menu jika role admin */}
+            {user && user.role === "admin" && (
+              <>
+                <NavItem to="/admin" active={isActive("/admin", true)}>
+                  Admin Dashboard
+                </NavItem>
+                <NavItem to="/admin/events" active={isActive("/admin/events")}>
+                  Admin Events
+                </NavItem>
+                <NavItem to="/admin/users" active={isActive("/admin/users")}>
+                  Admin Users
+                </NavItem>
+              </>
+            )}
 
-              <button
-                onClick={handleLogout}
-                className="px-3 py-1 rounded bg-red-500 text-white hover:bg-red-600"
-              >
-                Logout
-              </button>
-            </>
-          ) : (
-            <>
-              <Link to="/login" className="hover:text-blue-600">
-                Login
-              </Link>
-              <Link to="/register" className="hover:text-blue-600">
-                Register
-              </Link>
-            </>
-          )}
+            {/* Kanan: login/register atau profil+logout */}
+            {user ? (
+              <>
+                <NavItem to="/profile" active={isActive("/profile")}>
+                  Profil
+                </NavItem>
+                <button
+                  onClick={handleLogout}
+                  className="px-3 py-1.5 rounded-full text-xs font-semibold
+                             bg-red-500 text-white hover:bg-red-600 transition shadow-sm"
+                >
+                  Logout
+                </button>
+              </>
+            ) : (
+              <>
+                <NavItem to="/login" active={isActive("/login")}>
+                  Login
+                </NavItem>
+                <NavItem to="/register" active={isActive("/register")}>
+                  Register
+                </NavItem>
+              </>
+            )}
+          </div>
         </div>
       </div>
     </nav>
   );
 };
+
+// Komponen kecil untuk link navbar
+const NavItem = ({ to, active, children }) => (
+  <Link
+    to={to}
+    className={`px-3 py-1.5 rounded-full text-xs font-medium transition
+      ${
+        active
+          ? "bg-white text-blue-800 shadow-sm"
+          : "text-blue-100 hover:bg-white/10"
+      }`}
+  >
+    {children}
+  </Link>
+);
 
 export default Navbar;
