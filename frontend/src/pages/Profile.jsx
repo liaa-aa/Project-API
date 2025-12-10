@@ -1,47 +1,51 @@
 // src/pages/Profile.jsx
 import { useEffect, useState } from "react";
-import { updateProfile } from "../api/authApi"; // sesuaikan jika berbeda
+import { getLocalUser, updateUserProfile } from "../api/userApi";
 
 export default function Profile() {
   const [user, setUser] = useState(null);
   const [editing, setEditing] = useState(false);
 
-  // Form state
-  const [fullName, setFullName] = useState("");
-  const [city, setCity] = useState("");
-  const [province, setProvince] = useState("");
+  // hanya edit nama, karena BE hanya punya field "name"
+  const [name, setName] = useState("");
 
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
 
   useEffect(() => {
-    const stored = localStorage.getItem("user");
-    if (stored) {
-      const parsed = JSON.parse(stored);
-      setUser(parsed);
-
-      // isi form default
-      setFullName(parsed.fullName || "");
-      setCity(parsed.city || "");
-      setProvince(parsed.province || "");
+    const current = getLocalUser();
+    if (current) {
+      setUser(current);
+      setName(current.name || "");
     }
   }, []);
 
   const handleSave = async (e) => {
     e.preventDefault();
+    if (!user) return;
+
     setLoading(true);
     setMessage("");
 
     try {
-      const updated = await updateProfile({ fullName, city, province });
+      const id = user.id || user._id; // jaga-jaga kalau bentuknya beda
+      const updated = await updateUserProfile(id, { name });
 
-      // Simpan & update UI
-      localStorage.setItem("user", JSON.stringify(updated.user));
-      setUser(updated.user);
+      // BE mengembalikan dokumen user MongoDB: { _id, name, email, role, ... }
+      const normalizedUser = {
+        id: updated.id || updated._id || user.id,
+        name: updated.name,
+        email: updated.email,
+        role: updated.role,
+      };
+
+      localStorage.setItem("user", JSON.stringify(normalizedUser));
+      setUser(normalizedUser);
 
       setMessage("Profil berhasil diperbarui!");
       setEditing(false);
     } catch (err) {
+      console.error(err);
       setMessage("Gagal memperbarui profil.");
     } finally {
       setLoading(false);
@@ -59,7 +63,6 @@ export default function Profile() {
   return (
     <div className="min-h-screen bg-slate-50 px-4 py-10 flex justify-center">
       <div className="w-full max-w-xl">
-        {/* CARD PROFIL */}
         <div className="bg-white rounded-2xl shadow-md border border-slate-100 px-6 py-7">
           {/* HEADER */}
           <div className="flex justify-between items-start mb-5">
@@ -89,13 +92,11 @@ export default function Profile() {
             </div>
           )}
 
-          {/* DATA PROFIL */}
+          {/* MODE LIHAT */}
           {!editing && (
             <div className="space-y-4">
-              <ProfileItem label="Nama" value={user.fullName} />
+              <ProfileItem label="Nama" value={user.name} />
               <ProfileItem label="Email" value={user.email} />
-              <ProfileItem label="Kota" value={user.city || "-"} />
-              <ProfileItem label="Provinsi" value={user.province || "-"} />
               <ProfileItem
                 label="Peran"
                 value={user.role === "admin" ? "Administrator" : "Relawan"}
@@ -103,7 +104,7 @@ export default function Profile() {
             </div>
           )}
 
-          {/* FORM EDIT (muncul hanya ketika editing true) */}
+          {/* MODE EDIT */}
           {editing && (
             <form onSubmit={handleSave} className="space-y-4 mt-4">
               <div className="space-y-1.5">
@@ -112,37 +113,12 @@ export default function Profile() {
                 </label>
                 <input
                   type="text"
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
                 />
               </div>
 
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-slate-700">
-                  Kota
-                </label>
-                <input
-                  type="text"
-                  value={city}
-                  onChange={(e) => setCity(e.target.value)}
-                  className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-slate-700">
-                  Provinsi
-                </label>
-                <input
-                  type="text"
-                  value={province}
-                  onChange={(e) => setProvince(e.target.value)}
-                  className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-
-              {/* BUTTONS */}
               <div className="flex gap-3 pt-2">
                 <button
                   type="submit"
@@ -155,7 +131,10 @@ export default function Profile() {
 
                 <button
                   type="button"
-                  onClick={() => setEditing(false)}
+                  onClick={() => {
+                    setEditing(false);
+                    setName(user.name || "");
+                  }}
                   className="px-4 py-2 rounded-xl text-sm font-medium text-slate-600 bg-slate-200 hover:bg-slate-300 transition"
                 >
                   Batal
