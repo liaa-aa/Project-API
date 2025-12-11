@@ -22,7 +22,12 @@ export default function Login() {
       localStorage.setItem("token", data.token);
       localStorage.setItem("user", JSON.stringify(data.user));
 
-      navigate("/");
+      // 🔥 Cek role, arahkan ke halaman yang tepat
+      if (data.user?.role === "admin") {
+        navigate("/admin"); // -> AdminLayout + sidebar
+      } else {
+        navigate("/"); // -> Home user biasa
+      }
     } catch (err) {
       console.error(err);
       setError("Gagal login dengan Google.");
@@ -40,7 +45,12 @@ export default function Login() {
       localStorage.setItem("token", token);
       localStorage.setItem("user", JSON.stringify(user));
 
-      navigate("/");
+      // 🔥 Sama di sini: cek role
+      if (user?.role === "admin") {
+        navigate("/admin");
+      } else {
+        navigate("/");
+      }
     } catch (err) {
       setError("Login gagal. Periksa email dan password.");
     } finally {
@@ -69,7 +79,7 @@ export default function Login() {
             </div>
           )}
 
-          {/* ========== GOOGLE LOGIN BUTTON (di atas form) ========== */}
+          {/* GOOGLE LOGIN */}
           <GoogleLoginButton
             onSuccess={handleGoogleSuccess}
             onError={() => setError("Google login gagal")}
@@ -82,7 +92,7 @@ export default function Login() {
             <div className="flex-1 h-px bg-slate-200"></div>
           </div>
 
-          {/* ========== FORM EMAIL / PASSWORD ========== */}
+          {/* FORM EMAIL / PASSWORD */}
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-1.5">
               <label className="block text-xs font-medium text-slate-700">

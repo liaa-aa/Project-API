@@ -31,11 +31,8 @@ export default function Events() {
       <div className="max-w-6xl mx-auto px-4 pt-10 pb-16">
         {/* Header */}
         <header className="mb-8">
-          <p className="text-xs font-semibold uppercase tracking-wide text-blue-600">
+          <h1 className="font-semibold uppercase tracking-wide text-blue-600">
             Daftar Kegiatan
-          </p>
-          <h1 className="mt-1 text-2xl md:text-3xl font-bold text-slate-900">
-            Event &amp; Bencana yang Sedang Berlangsung
           </h1>
           <p className="mt-2 text-sm text-slate-500 max-w-2xl">
             Temukan kegiatan relawan yang dapat kamu ikuti untuk membantu sesama
