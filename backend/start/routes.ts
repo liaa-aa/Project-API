@@ -30,6 +30,14 @@ router.get('/users/:id', '#controllers/usersController.show')
 
 router
   .group(() => {
+    router.post('/users/:id/certificates', '#controllers/usersController.addCertificate')
+    router.put('/users/:id/certificates/:certId', '#controllers/usersController.updateCertificate')
+    router.delete('/users/:id/certificates/:certId', '#controllers/usersController.deleteCertificate')
+  })
+  .use(middleware.auth())
+
+router
+  .group(() => {
     router.post('/graphql', '#controllers/graphqlController.handle')
   })
   .use(middleware.optionalAuth())
