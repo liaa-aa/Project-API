@@ -26,7 +26,7 @@ router
   .use(middleware.admin())
 
 router.put('/users/:id', '#controllers/usersController.update').use(middleware.auth())
-router.get('/users/:id', '#controllers/usersController.show')
+router.get('/users/:id', '#controllers/usersController.show').use(middleware.auth())
 
 router
   .group(() => {
