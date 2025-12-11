@@ -66,6 +66,8 @@ export default function EventDetail() {
       setLoadingWeather(true);
       try {
         const data = await getWeatherForEvent(id);
+        // simpan inner weather saja ke state:
+        // { city, country, temp, feelsLike, humidity, description, icon, windSpeed }
         setWeather(data?.weather || null);
       } catch (err) {
         console.error("Gagal mengambil cuaca:", err);
@@ -241,7 +243,9 @@ export default function EventDetail() {
 
     if (!weather) return null;
 
-    const { city, country, weather: w } = weather;
+    // `weather` di state berisi langsung:
+    // { city, country, temp, feelsLike, humidity, description, icon, windSpeed }
+    const w = weather;
 
     return (
       <div className="mt-8 border-t border-slate-200 pt-6">
@@ -249,7 +253,7 @@ export default function EventDetail() {
           Perkiraan Cuaca di Lokasi Bencana
         </h3>
         <p className="text-xs text-slate-600">
-          {city}, {country}
+          {w.city}, {w.country}
         </p>
         <p className="mt-1 text-xs text-slate-600">
           Suhu: {w.temp}°C (terasa {w.feelsLike}°C) • Kelembapan: {w.humidity}%
@@ -288,7 +292,7 @@ export default function EventDetail() {
           onClick={() => navigate(-1)}
           className="mb-4 inline-flex items-center gap-1 text-xs font-medium text-blue-700 hover:text-blue-800"
         >
-          ← Kembali ke daftar event
+          ← Kembali
         </button>
 
         {/* Card utama */}
@@ -300,9 +304,9 @@ export default function EventDetail() {
 
           {/* Lokasi, jenis, tanggal */}
           <div className="mt-1 text-sm text-slate-600 flex flex-col gap-1">
-            {event.location && <span>📍 Lokasi: {event.location}</span>}
-            {event.type && <span>🧭 Jenis: {event.type}</span>}
-            {event.date && <span>📅 Tanggal: {formatDate(event.date)}</span>}
+            {event.location && <span>Lokasi: {event.location}</span>}
+            {event.type && <span>Jenis: {event.type}</span>}
+            {event.date && <span>Tanggal: {formatDate(event.date)}</span>}
           </div>
 
           {/* Deskripsi */}

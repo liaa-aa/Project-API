@@ -25,7 +25,7 @@ const getAuthHeaders = () => {
     : { "Content-Type": "application/json" };
 };
 
-// Ambil profil user (GET /users/:id)
+// Ambil profil user lengkap (GET /users/:id)
 export const getUserProfile = async (id) => {
   const res = await fetch(`${API_BASE_URL}/users/${id}`, {
     method: "GET",
@@ -43,7 +43,7 @@ export const getUserProfile = async (id) => {
   }
 
   // BE mengembalikan dokumen User secara langsung (dari Mongo):
-  // { _id, name, email, role, ... }
+  // { _id, name, email, role, certificates, ... }
   return data;
 };
 
@@ -65,3 +65,65 @@ export const updateUserProfile = async (id, payload) => {
   // BE balas user yang sudah di-update
   return data;
 };
+
+/* =========================
+ *  API SERTIFIKAT USER
+ * ======================= */
+
+// Tambah sertifikat (POST /users/:id/certificates)
+export const addUserCertificate = async (userId, payload) => {
+  const res = await fetch(`${API_BASE_URL}/users/${userId}/certificates`, {
+    method: "POST",
+    headers: getAuthHeaders(),
+    body: JSON.stringify(payload),
+  });
+
+  const data = await res.json().catch(() => ({}));
+
+  if (!res.ok) {
+    throw new Error(data.message || "Gagal menambah sertifikat");
+  }
+
+  // BE mengembalikan user yang sudah di-update (dengan certificates terbaru)
+  return data;
+};
+
+// Hapus sertifikat (DELETE /users/:id/certificates/:certId)
+export const deleteUserCertificate = async (userId, certId) => {
+  const res = await fetch(
+    `${API_BASE_URL}/users/${userId}/certificates/${certId}`,
+    {
+      method: "DELETE",
+      headers: getAuthHeaders(),
+    }
+  );
+
+  const data = await res.json().catch(() => ({}));
+
+  if (!res.ok) {
+    throw new Error(data.message || "Gagal menghapus sertifikat");
+  }
+
+  // BE hanya balas { message: ... }, jadi kita return apa adanya
+  return data;
+};
+
+// (opsional kalau nanti mau edit sertifikat)
+// export const updateUserCertificate = async (userId, certId, payload) => {
+//   const res = await fetch(
+//     `${API_BASE_URL}/users/${userId}/certificates/${certId}`,
+//     {
+//       method: "PUT",
+//       headers: getAuthHeaders(),
+//       body: JSON.stringify(payload),
+//     }
+//   );
+
+//   const data = await res.json().catch(() => ({}));
+
+//   if (!res.ok) {
+//     throw new Error(data.message || "Gagal mengupdate sertifikat");
+//   }
+
+//   return data; // user ter-update
+// };
