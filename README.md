@@ -2,15 +2,15 @@
 
 Aplikasi web untuk manajemen event volunteer dan bencana dengan arsitektur fullstack menggunakan AdonisJS (Backend) dan React (Frontend).
 
-## 📋 Daftar Isi
+## Daftar Isi
 
 - [Teknologi](#teknologi)
 - [Setup Backend](#setup-backend)
 - [Setup Frontend](#setup-frontend)
 - [Seeder Usage](#seeder-usage)
-- [Testing dengan Postman](#testing-dengan-postman)
 
-## 🛠 Teknologi
+
+## Teknologi
 
 ### Backend
 - **Framework**: AdonisJS v6
@@ -27,12 +27,13 @@ Aplikasi web untuk manajemen event volunteer dan bencana dengan arsitektur fulls
 - **HTTP Client**: Axios
 - **Build Tool**: Vite
 
-## 🚀 Setup Backend
+## Setup Backend
 
 ### Prerequisites
 - Node.js (v18+)
 - MongoDB Atlas Account
 - Google Cloud Console Account (untuk OAuth)
+- OpenWeatherMap Account (untuk Weather API)
 - Git
 
 ### Installation
@@ -71,6 +72,9 @@ Aplikasi web untuk manajemen event volunteer dan bencana dengan arsitektur fulls
    MONGO_DB_NAME=VoulenteerEvent
    
    GOOGLE_CLIENT_ID=your_google_client_id_here
+   
+   WEATHER_API_KEY=your_openweather_api_key_here
+   WEATHER_API_BASE_URL=https://api.openweathermap.org/data/2.5/weather
    ```
 
 5. **Setup Google OAuth**
@@ -80,7 +84,12 @@ Aplikasi web untuk manajemen event volunteer dan bencana dengan arsitektur fulls
    - Buat OAuth 2.0 credentials
    - Copy Client ID ke .env
 
-6. **Run Development Server**
+6. **Setup Weather API**
+   - Daftar di [OpenWeatherMap](https://openweathermap.org/api)
+   - Buat API key gratis
+   - Copy API key ke .env
+
+7. **Run Development Server**
    ```bash
    npm run dev
    ```
@@ -98,7 +107,7 @@ npm run lint       # Run ESLint
 npm run typecheck  # TypeScript type checking
 ```
 
-## 🎨 Setup Frontend
+## Setup Frontend
 
 ### Installation
 
@@ -132,29 +141,26 @@ npm run preview  # Preview production build
 npm run lint     # Run ESLint
 ```
 
-## 🌱 Seeder Usage
+## Seeder Usage
 
 ### Menjalankan Seeder
 
-Seeder digunakan untuk mengisi database dengan data awal (admin dan sample users).
+Seeder digunakan untuk mengisi database dengan admin user.
 
 ```bash
 cd backend
-npm run seed
+node ace seed:admin
 ```
 
 ### Data yang Akan Dibuat:
 
 #### **Admin Account**
-- **Email**: `admin@volunteer.com`
-- **Password**: `admin123`
+- **Email**: `admin@example.com`
+- **Password**: `adminpassword`
 - **Role**: `admin`
+- **Name**: `Admin`
 
-#### **Sample Volunteers**
-- **Email**: `john@volunteer.com` / **Password**: `volunteer123`
-- **Email**: `jane@volunteer.com` / **Password**: `volunteer123`
-- **Email**: `bob@volunteer.com` / **Password**: `volunteer123`
-- **Role**: `relawan`
+**Note:** Jika admin sudah ada, seeder akan skip dan tidak membuat duplikat.
 
 ### Kapan Menggunakan Seeder:
 - Setup development environment baru
@@ -162,222 +168,20 @@ npm run seed
 - Demo/testing dengan data konsisten
 - Onboarding developer baru
 
-## 📮 Testing dengan Postman
 
-### Setup Postman Environment
 
-1. **Buat Environment Baru**
-   - Name: `VoulenteerEvent Local`
-   - Variables:
-     - `base_url`: `http://localhost:3333`
-     - `token`: (akan diisi setelah login)
-
-### Test Flow Recommended
-
-#### **1. Test Authentication**
-
-**Register User Baru:**
-```http
-POST {{base_url}}/register
-Content-Type: application/json
-
-{
-  "name": "Test User",
-  "email": "test@example.com",
-  "password": "password123"
-}
-```
-
-**Login Admin (dari seeder):**
-```http
-POST {{base_url}}/login
-Content-Type: application/json
-
-{
-  "email": "admin@volunteer.com",
-  "password": "admin123"
-}
-```
-
-**Login User (dari seeder):**
-```http
-POST {{base_url}}/login
-Content-Type: application/json
-
-{
-  "email": "john@volunteer.com",
-  "password": "volunteer123"
-}
-```
-
-**Google Login:**
-```http
-POST {{base_url}}/google-login
-Content-Type: application/json
-
-{
-  "idToken": "google_id_token_from_frontend"
-}
-```
-
-#### **2. Test Public Endpoints**
-
-**Get All Bencana:**
-```http
-GET {{base_url}}/bencana
-```
-
-**Get Bencana by ID:**
-```http
-GET {{base_url}}/bencana/BENCANA_ID_HERE
-```
-
-#### **3. Test Protected Endpoints (Admin)**
-
-**Get All Users (Admin only):**
-```http
-GET {{base_url}}/users
-Authorization: Bearer {{token}}
-```
-
-**Create Bencana (Admin only):**
-```http
-POST {{base_url}}/bencana
-Authorization: Bearer {{token}}
-Content-Type: application/json
-
-{
-  "title": "Banjir Jakarta",
-  "description": "Banjir melanda Jakarta Selatan",
-  "location": "Jakarta Selatan",
-  "type": "flood",
-  "date": "2024-01-15"
-}
-```
-
-#### **4. Test Volunteer Registration**
-
-**Join Bencana (User):**
-```http
-POST {{base_url}}/bencana/BENCANA_ID/join
-Authorization: Bearer {{token}}
-```
-
-**My Registrations (User):**
-```http
-GET {{base_url}}/me/registrations
-Authorization: Bearer {{token}}
-```
-
-**Cancel Registration (User):**
-```http
-DELETE {{base_url}}/bencana/BENCANA_ID/leave
-Authorization: Bearer {{token}}
-```
-
-#### **5. Test GraphQL (Admin)**
-
-**GraphQL Query:**
-```http
-POST {{base_url}}/graphql
-Authorization: Bearer {{token}}
-Content-Type: application/json
-
-{
-  "query": "query { getBencana { id title location type } }"
-}
-```
-
-**GraphQL Mutation:**
-```http
-POST {{base_url}}/graphql
-Authorization: Bearer {{token}}
-Content-Type: application/json
-
-{
-  "query": "mutation { joinBencana(bencanaId: \"BENCANA_ID\") { id status } }"
-}
-```
-
-### Tips Postman Testing
-
-1. **Save Token Otomatis**
-   - Di tab "Tests" pada request login, tambahkan:
-   ```javascript
-   pm.test("Save token", function () {
-       var jsonData = pm.response.json();
-       pm.environment.set("token", jsonData.token);
-   });
-   ```
-
-2. **Test Response Status**
-   ```javascript
-   pm.test("Status code is 200", function () {
-       pm.response.to.have.status(200);
-   });
-   ```
-
-3. **Organize dengan Collections**
-   - Buat folder: "Authentication", "Bencana", "Users", "Volunteer Registration"
-   - Group related requests
-
-### Expected Responses
-
-**Login Success:**
-```json
-{
-  "message": "Login berhasil",
-  "token": "eyJhbGciOiJIUzI1NiIs...",
-  "user": {
-    "id": "user_id",
-    "name": "Admin Volunteer",
-    "email": "admin@volunteer.com",
-    "role": "admin"
-  }
-}
-```
-
-**Google Login Success:**
-```json
-{
-  "message": "Login dengan Google berhasil",
-  "token": "eyJhbGciOiJIUzI1NiIs...",
-  "user": {
-    "id": "user_id",
-    "name": "John Doe",
-    "email": "john@gmail.com",
-    "role": "relawan"
-  }
-}
-```
-
-**Unauthorized (tanpa token):**
-```json
-{
-  "message": "Akses tidak sah"
-}
-```
-
-**Join Bencana Success:**
-```json
-{
-  "message": "Berhasil mendaftar sebagai relawan",
-  "data": {
-    "id": "registration_id",
-    "user": "user_id",
-    "bencana": "bencana_id",
-    "status": "pending"
-  }
-}
-```
-
-## 📝 Notes
+## Notes
 
 - README ini bersifat **sementara** dan akan diperbarui seiring development
 - API Documentation lengkap akan ditambahkan kemudian
 - Deployment guide akan disediakan saat ready untuk production
 - Troubleshooting section akan diperluas berdasarkan feedback
 
-## 📞 Support
+## Authors
+
+- **Achmad Aulia Irsyad** - Backend Developer
+- **Amalia Azzahra** - Frontend Developer
+
+## Support
 
 Jika ada pertanyaan atau issue, silakan hubungi tim development.
