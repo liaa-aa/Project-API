@@ -132,10 +132,10 @@ export default function Profile() {
     resetCertificateForm();
   };
 
-  // ✅ Versi B: keluar edit + kembali ke halaman sebelumnya
+  // ✅ Perbaikan: keluar edit + kembali ke halaman /profile (bukan history/home)
   const handleBackFromEdit = () => {
     handleCancel();
-    navigate(-1);
+    navigate("/profile", { replace: true });
   };
 
   const handleSaveProfile = async () => {
@@ -331,7 +331,7 @@ export default function Profile() {
           </button>
         ) : (
           <div className="flex gap-2">
-            {/* ✅ Tombol Kembali (Versi B) */}
+            {/* ✅ Tombol Kembali: selalu ke /profile */}
             <button
               type="button"
               onClick={handleBackFromEdit}
@@ -341,14 +341,8 @@ export default function Profile() {
               Kembali
             </button>
 
-            <button
-              type="button"
-              onClick={handleCancel}
-              className="px-4 py-2 rounded-lg bg-slate-100 text-slate-700 text-sm"
-              disabled={loading}
-            >
-              Batal
-            </button>
+            {/* ❌ Tombol Batal DIHAPUS */}
+
             <button
               type="button"
               onClick={handleSaveProfile}
@@ -488,9 +482,7 @@ export default function Profile() {
 
                   <span className="text-xs text-slate-600">
                     {certPhoto
-                      ? `File dipilih ✅ (${
-                          certPhotoMeta.originalName || "gambar"
-                        })`
+                      ? `File dipilih ✅ (${certPhotoMeta.originalName || "gambar"})`
                       : "Belum ada file"}
                   </span>
                 </div>
@@ -575,14 +567,7 @@ export default function Profile() {
                     alt="Foto sertifikat"
                     className="w-48 rounded-xl border border-slate-200"
                   />
-                  <a
-                    href={c.photo}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="block text-[11px] text-blue-600 underline mt-1"
-                  >
-                    Lihat ukuran penuh
-                  </a>
+                  {/* ❌ Link "Lihat ukuran penuh" DIHAPUS */}
                 </div>
               )}
             </div>
