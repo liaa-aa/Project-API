@@ -21,6 +21,7 @@ export const root = {
         type: bencana.type,
         date: bencana.date.toISOString(),
         maxVolunteers: bencana.maxVolunteers,currentVolunteers,
+        photo: bencana.photo,
       })
     }
     return results
@@ -44,7 +45,8 @@ export const root = {
       location: bencana.location,
       type: bencana.type,
       date: bencana.date.toISOString(),
-      maxVolunteers: bencana.maxVolunteers,currentVolunteers
+      maxVolunteers: bencana.maxVolunteers,currentVolunteers,
+      photo: bencana.photo,
     }
   },
 
@@ -56,6 +58,7 @@ export const root = {
       type,
       date,
       maxVolunteers,
+      photo,
     }: {
       title: string
       description: string
@@ -63,13 +66,14 @@ export const root = {
       type: string
       date: string
       maxVolunteers?: number
+      photo?: string
     },
     context: any
   ) {
     if (context.user?.role !== 'admin') {
       throw new Error('Unauthorized')
     }
-    const bencana = new Bencana({ title, description, location, type, date, maxVolunteers })
+    const bencana = new Bencana({ title, description, location, type, date, maxVolunteers, photo })
     return await bencana.save()
   },
 
@@ -82,6 +86,7 @@ export const root = {
       type,
       date,
       maxVolunteers,
+      photo,
     }: {
       id: string
       title?: string
@@ -90,6 +95,7 @@ export const root = {
       type?: string
       date?: string
       maxVolunteers?: number
+      photo?: string
     },
     context: any
   ) {
@@ -103,6 +109,7 @@ export const root = {
     if (type !== undefined) updates.type = type
     if (date !== undefined) updates.date = date
     if (maxVolunteers !== undefined) updates.maxVolunteers = maxVolunteers 
+    if (photo !== undefined) updates.photo = photo
 
     const bencana = await Bencana.findByIdAndUpdate(id, updates, { new: true })
     if (!bencana) {

@@ -10,6 +10,7 @@ export const schema = buildSchema(`
         date: String!
         maxVolunteers: Int
         currentVolunteers: Int!
+        photo: String
     }
 
     type RegisRelawan {
@@ -37,6 +38,7 @@ export const schema = buildSchema(`
           type: String!,
           date: String!
           maxVolunteers: Int!
+          photo: String
         ): Bencana
 
         updateBencana(
@@ -47,6 +49,7 @@ export const schema = buildSchema(`
           type: String,
           date: String
           maxVolunteers: Int
+          photo: String
         ): Bencana
 
         deleteBencana(id: ID!): Bencana
