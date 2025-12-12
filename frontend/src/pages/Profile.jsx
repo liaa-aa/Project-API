@@ -1,6 +1,7 @@
 // frontend/src/pages/Profile.jsx
 
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   getLocalUser,
   getLocalUserId,
@@ -55,6 +56,8 @@ const compressImageToDataUrl = (file, opts = {}) =>
   });
 
 export default function Profile() {
+  const navigate = useNavigate();
+
   const [user, setUser] = useState(null);
   const [editing, setEditing] = useState(false);
 
@@ -94,10 +97,15 @@ export default function Profile() {
     const local = getLocalUser();
     setUser(local);
 
-      const userId = local.id || local._id;
+    const userId = local?.id || local?._id;
 
-      setLoading(true);
-      setMessage("");
+    if (!userId) {
+      setMessage("User ID tidak ditemukan. Silakan logout lalu login ulang.");
+      return;
+    }
+
+    setLoading(true);
+    setMessage("");
 
     (async () => {
       try {
@@ -106,6 +114,8 @@ export default function Profile() {
         setName(data?.name || "");
       } catch (err) {
         setMessage(err?.message || "Gagal memuat profil");
+      } finally {
+        setLoading(false);
       }
     })();
   }, []);
@@ -120,6 +130,12 @@ export default function Profile() {
     setMessage("");
     setName(user?.name || "");
     resetCertificateForm();
+  };
+
+  // ✅ Versi B: keluar edit + kembali ke halaman sebelumnya
+  const handleBackFromEdit = () => {
+    handleCancel();
+    navigate(-1);
   };
 
   const handleSaveProfile = async () => {
@@ -224,7 +240,9 @@ export default function Profile() {
       const a = new Date(certIssued).getTime();
       const b = new Date(certExpired).getTime();
       if (!Number.isNaN(a) && !Number.isNaN(b) && b < a) {
-        setCertError("Tanggal kadaluarsa tidak boleh lebih awal dari tanggal terbit.");
+        setCertError(
+          "Tanggal kadaluarsa tidak boleh lebih awal dari tanggal terbit."
+        );
         return;
       }
     }
@@ -237,7 +255,7 @@ export default function Profile() {
       if (certProvider) payload.provider = certProvider;
       if (certNumber) payload.certificateNumber = certNumber;
       if (certCategory) payload.category = certCategory;
-      
+
       // Only add dates if they are valid YYYY-MM-DD format
       if (certIssued && /^\d{4}-\d{2}-\d{2}$/.test(certIssued)) {
         payload.dateIssued = certIssued;
@@ -245,18 +263,18 @@ export default function Profile() {
       if (certExpired && /^\d{4}-\d{2}-\d{2}$/.test(certExpired)) {
         payload.dateExpired = certExpired;
       }
-      
+
       if (certPhoto) payload.photo = certPhoto;
 
-      console.log('Certificate payload:', payload);
-      const userId = user._id || user.id;
+      console.log("Certificate payload:", payload);
+
+      const userId = user?._id || user?.id || uid;
       const updated = await addUserCertificate(userId, payload);
 
       setUser(updated);
       resetCertificateForm();
       setMessage("Sertifikat berhasil ditambahkan");
     } catch (err) {
-      // kalau masih 413, berarti limit BE terlalu kecil sekali
       setCertError(err?.message || "Gagal menambah sertifikat");
     } finally {
       setLoading(false);
@@ -313,6 +331,16 @@ export default function Profile() {
           </button>
         ) : (
           <div className="flex gap-2">
+            {/* ✅ Tombol Kembali (Versi B) */}
+            <button
+              type="button"
+              onClick={handleBackFromEdit}
+              className="px-4 py-2 rounded-lg bg-slate-200 text-slate-800 text-sm"
+              disabled={loading}
+            >
+              Kembali
+            </button>
+
             <button
               type="button"
               onClick={handleCancel}
@@ -383,10 +411,14 @@ export default function Profile() {
 
             <p className="text-xs text-slate-600 mb-3">
               <span className="font-medium">Keterangan:</span> <br />
-              - <span className="font-medium">Nama Sertifikat</span> = nama sertifikat (contoh: P3K). <br />
-              - <span className="font-medium">Tanggal Terbit</span> = tanggal sertifikat dikeluarkan. <br />
-              - <span className="font-medium">Tanggal Kadaluarsa</span> = berlaku sampai kapan (opsional). <br />
-              - <span className="font-medium">Foto Sertifikat</span> wajib gambar. Sistem akan mengompres agar tidak error 413.
+              - <span className="font-medium">Nama Sertifikat</span> = nama
+              sertifikat (contoh: P3K). <br />
+              - <span className="font-medium">Tanggal Terbit</span> = tanggal
+              sertifikat dikeluarkan. <br />
+              - <span className="font-medium">Tanggal Kadaluarsa</span> =
+              berlaku sampai kapan (opsional). <br />
+              - <span className="font-medium">Foto Sertifikat</span> wajib
+              gambar. Sistem akan mengompres agar tidak error 413.
             </p>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -437,7 +469,7 @@ export default function Profile() {
                 />
               </div>
 
-              {/* ✅ CUSTOM FILE PICKER (beda dari default choose file) */}
+              {/* ✅ CUSTOM FILE PICKER */}
               <div className="sm:col-span-2">
                 <label className="block text-xs text-slate-600 mb-1">
                   Upload Foto Sertifikat (wajib)
@@ -456,19 +488,21 @@ export default function Profile() {
 
                   <span className="text-xs text-slate-600">
                     {certPhoto
-                      ? `File dipilih ✅ (${certPhotoMeta.originalName || "gambar"})`
+                      ? `File dipilih ✅ (${
+                          certPhotoMeta.originalName || "gambar"
+                        })`
                       : "Belum ada file"}
                   </span>
                 </div>
 
                 {certPhotoMeta.originalSize > 0 && (
                   <p className="mt-1 text-[11px] text-slate-500">
-                    Ukuran file asli: {(certPhotoMeta.originalSize / 1024 / 1024).toFixed(2)} MB
+                    Ukuran file asli:{" "}
+                    {(certPhotoMeta.originalSize / 1024 / 1024).toFixed(2)} MB{" "}
                     {" · "}Gambar akan dikompres otomatis.
                   </p>
                 )}
 
-                {/* preview */}
                 {certPhoto && (
                   <img
                     src={certPhoto}
@@ -488,7 +522,6 @@ export default function Profile() {
               Tambahkan
             </button>
 
-            {/* ✅ error dekat tombol */}
             {certError && (
               <div className="mt-2 text-xs text-red-700 bg-red-50 border border-red-200 px-3 py-2 rounded-xl">
                 {certError}
