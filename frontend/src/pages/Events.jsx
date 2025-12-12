@@ -79,10 +79,22 @@ export default function Events() {
                 <Link
                   key={id}
                   to={`/events/${id}`}
-                  className="group bg-white rounded-2xl shadow-md border border-slate-100 p-5
-                             hover:shadow-lg hover:-translate-y-0.5 transition transform flex flex-col gap-3"
+                  className="group bg-white rounded-2xl shadow-md border border-slate-100 overflow-hidden
+                             hover:shadow-lg hover:-translate-y-0.5 transition transform flex flex-col"
                 >
-                  <div className="flex items-start justify-between gap-3">
+                  {/* Photo Bencana */}
+                  {ev.photo && (
+                    <div className="w-full h-48 overflow-hidden">
+                      <img
+                        src={ev.photo}
+                        alt={ev.title}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      />
+                    </div>
+                  )}
+                  
+                  <div className="p-5 flex flex-col gap-3">
+                    <div className="flex items-start justify-between gap-3">
                     <div>
                       <h2 className="font-semibold text-base md:text-lg text-slate-900 group-hover:text-blue-700">
                         {ev.title}
@@ -166,6 +178,7 @@ export default function Events() {
                       Lihat detail
                       <span className="ml-1">→</span>
                     </span>
+                  </div>
                   </div>
                 </Link>
               );

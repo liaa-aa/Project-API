@@ -296,11 +296,23 @@ export default function EventDetail() {
         </button>
 
         {/* Card utama */}
-        <div className="bg-white rounded-2xl shadow-md border border-slate-100 p-6 md:p-8">
-          {/* Judul */}
-          <h1 className="text-2xl md:text-3xl font-bold text-slate-900 mb-1">
-            {event.title}
-          </h1>
+        <div className="bg-white rounded-2xl shadow-md border border-slate-100 overflow-hidden">
+          {/* Photo Bencana */}
+          {event.photo && (
+            <div className="w-full h-64 md:h-80 overflow-hidden">
+              <img
+                src={event.photo}
+                alt={event.title}
+                className="w-full h-full object-cover"
+              />
+            </div>
+          )}
+          
+          <div className="p-6 md:p-8">
+            {/* Judul */}
+            <h1 className="text-2xl md:text-3xl font-bold text-slate-900 mb-1">
+              {event.title}
+            </h1>
 
           {/* Lokasi, jenis, tanggal */}
           <div className="mt-1 text-sm text-slate-600 flex flex-col gap-1">
@@ -327,6 +339,7 @@ export default function EventDetail() {
 
           {/* Bagian cuaca */}
           {renderWeatherSection()}
+          </div>
         </div>
       </div>
     </div>

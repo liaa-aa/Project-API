@@ -48,6 +48,7 @@ export const getEvents = async () => {
         date
         maxVolunteers
         currentVolunteers
+        photo
       }
     }
   `;
@@ -70,6 +71,7 @@ export const getEventById = async (id) => {
         date
         maxVolunteers
         currentVolunteers
+        photo
       }
     }
   `;

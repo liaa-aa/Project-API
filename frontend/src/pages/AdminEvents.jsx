@@ -23,17 +23,16 @@ export default function AdminEvents() {
     type: "",
     date: "",
     maxVolunteers: "",
+    photo: "",
   });
   const [isEditing, setIsEditing] = useState(false);
 
-  // =======================
-  // LOAD EVENTS (GraphQL: getBencana via adminFetchEvents)
-  // =======================
   const loadEvents = async () => {
     setLoading(true);
     setError("");
     try {
       const data = await adminFetchEvents();
+      console.log('Events loaded:', data); // Debug log
       setEvents(data || []);
     } catch (err) {
       setError(err.message || "Gagal memuat event");
@@ -55,6 +54,7 @@ export default function AdminEvents() {
       type: "",
       date: "",
       maxVolunteers: "",
+      photo: "",
     });
     setIsEditing(false);
     setError("");
@@ -76,9 +76,20 @@ export default function AdminEvents() {
     }));
   };
 
-  // =======================
-  // SUBMIT CREATE / UPDATE (GraphQL: createBencana / updateBencana)
-  // =======================
+  const handlePhotoChange = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      setForm((prev) => ({
+        ...prev,
+        photo: String(reader.result || ""),
+      }));
+    };
+    reader.readAsDataURL(file);
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
@@ -98,10 +109,11 @@ export default function AdminEvents() {
     const payload = {
       title: form.title,
       description: form.description,
-      location: form.location, // sudah format "Kota, ID"
+      location: form.location,
       type: form.type,
-      date: form.date, // string YYYY-MM-DD → backend sudah handle
+      date: form.date,
       maxVolunteers: maxVol,
+      photo: form.photo,
     };
 
     try {
@@ -119,9 +131,6 @@ export default function AdminEvents() {
     }
   };
 
-  // =======================
-  // EDIT / DELETE
-  // =======================
   const handleEditClick = (ev) => {
     setForm({
       id: ev.id,
@@ -131,6 +140,7 @@ export default function AdminEvents() {
       type: ev.type || "",
       date: ev.date ? ev.date.slice(0, 10) : "",
       maxVolunteers: ev.maxVolunteers?.toString() || "",
+      photo: ev.photo || "",
     });
     setIsEditing(true);
     setError("");
@@ -161,13 +171,9 @@ export default function AdminEvents() {
     });
   };
 
-  // =======================
-  // RENDER
-  // =======================
   return (
     <div className="p-6 bg-slate-50 min-h-screen">
       <div className="max-w-5xl mx-auto space-y-6">
-        {/* HEADER */}
         <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div>
             <h1 className="text-2xl font-bold text-slate-800">
@@ -179,7 +185,6 @@ export default function AdminEvents() {
           </div>
         </header>
 
-        {/* FORM CREATE / EDIT */}
         <section className="border rounded-2xl p-5 bg-white shadow-sm">
           <h2 className="text-lg font-semibold mb-3">
             {isEditing ? "Edit Event" : "Buat Event Baru"}
@@ -273,6 +278,27 @@ export default function AdminEvents() {
               </div>
             </div>
 
+            <div>
+              <label className="block text-sm font-medium mb-1">
+                Photo Bencana
+              </label>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handlePhotoChange}
+                className="w-full border rounded px-3 py-2 text-sm"
+              />
+              {form.photo && (
+                <div className="mt-2">
+                  <img
+                    src={form.photo}
+                    alt="Preview"
+                    className="w-48 h-32 object-cover rounded border"
+                  />
+                </div>
+              )}
+            </div>
+
             <div className="flex gap-3 pt-2">
               <button
                 type="submit"
@@ -293,7 +319,6 @@ export default function AdminEvents() {
           </form>
         </section>
 
-        {/* LIST EVENT */}
         <section>
           <h2 className="text-lg font-semibold mb-3">Daftar Event</h2>
 
@@ -308,9 +333,23 @@ export default function AdminEvents() {
               {events.map((ev) => (
                 <div
                   key={ev.id}
-                  className="bg-white border rounded-2xl shadow-sm p-4 flex flex-col justify-between"
+                  className="bg-white border rounded-2xl shadow-sm overflow-hidden flex flex-col justify-between"
                 >
-                  <div>
+                  {ev.photo && ev.photo.trim() !== '' && (
+                    <div className="w-full h-32 overflow-hidden">
+                      <img
+                        src={ev.photo}
+                        alt={ev.title}
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          console.log('Image load error for event:', ev.title, 'Photo URL:', ev.photo);
+                          e.target.style.display = 'none';
+                        }}
+                        onLoad={() => console.log('Image loaded successfully for:', ev.title)}
+                      />
+                    </div>
+                  )}
+                  <div className="p-4">
                     <h3 className="text-base font-semibold text-slate-800">
                       {ev.title}
                     </h3>
@@ -329,23 +368,23 @@ export default function AdminEvents() {
                     <p className="text-sm text-slate-700 mt-2 line-clamp-2">
                       {ev.description || "Tidak ada deskripsi."}
                     </p>
-                  </div>
 
-                  <div className="flex justify-end gap-2 mt-3 pt-3 border-t">
-                    <button
-                      type="button"
-                      onClick={() => handleEditClick(ev)}
-                      className="px-3 py-1 rounded bg-slate-200 text-xs hover:bg-slate-300"
-                    >
-                      Edit
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleDeleteClick(ev.id)}
-                      className="px-3 py-1 rounded bg-red-600 text-white text-xs hover:bg-red-700"
-                    >
-                      Hapus
-                    </button>
+                    <div className="flex justify-end gap-2 mt-3 pt-3 border-t">
+                      <button
+                        type="button"
+                        onClick={() => handleEditClick(ev)}
+                        className="px-3 py-1 rounded bg-slate-200 text-xs hover:bg-slate-300"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteClick(ev.id)}
+                        className="px-3 py-1 rounded bg-red-600 text-white text-xs hover:bg-red-700"
+                      >
+                        Hapus
+                      </button>
+                    </div>
                   </div>
                 </div>
               ))}

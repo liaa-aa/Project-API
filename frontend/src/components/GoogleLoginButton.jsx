@@ -25,11 +25,19 @@ export default function GoogleLoginButton({ onSuccess, onError }) {
             });
 
             const data = await res.json();
-            if (!res.ok || !data.success) {
+            console.log('Google login response:', data);
+            
+            if (!res.ok) {
               throw new Error(data.message || "Login Google gagal");
             }
-
-            onSuccess?.(data);
+            
+            // Backend mengirim token untuk sukses, bukan success field
+            if (data.token) {
+              localStorage.setItem("token", data.token);
+              onSuccess?.(data);
+            } else {
+              throw new Error(data.message || "Login Google gagal");
+            }
           } catch (err) {
             console.error("Google login error:", err);
             onError?.(err);

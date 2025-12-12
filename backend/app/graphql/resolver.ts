@@ -20,7 +20,8 @@ export const root = {
         location: bencana.location,
         type: bencana.type,
         date: bencana.date.toISOString(),
-        maxVolunteers: bencana.maxVolunteers,currentVolunteers,
+        maxVolunteers: bencana.maxVolunteers,
+        currentVolunteers,
         photo: bencana.photo,
       })
     }
@@ -45,7 +46,8 @@ export const root = {
       location: bencana.location,
       type: bencana.type,
       date: bencana.date.toISOString(),
-      maxVolunteers: bencana.maxVolunteers,currentVolunteers,
+      maxVolunteers: bencana.maxVolunteers,
+      currentVolunteers,
       photo: bencana.photo,
     }
   },
@@ -258,6 +260,7 @@ export const root = {
       id: registration._id.toString(),
       userId: registration.user.toString(),
       bencanaId: registration.bencana.toString(),
+      status: registration.status,
       createdAt: registration.createdAt.toISOString(),
       updatedAt: registration.updatedAt.toISOString(),
     }

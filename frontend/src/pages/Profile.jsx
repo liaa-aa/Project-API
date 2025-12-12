@@ -33,11 +33,13 @@ export default function Profile() {
       const local = getLocalUser();
       if (!local) return;
 
+      const userId = local.id || local._id;
+
       setLoading(true);
       setMessage("");
 
       try {
-        const data = await getUserProfile(local.id || local._id);
+        const data = await getUserProfile(userId);
         setUser(data);
         setName(data?.name || "");
       } catch (err) {
@@ -85,17 +87,26 @@ export default function Profile() {
     setMessage("");
 
     try {
-      const payload = {
-        name: certName,
-        provider: certProvider,
-        certificateNumber: certNumber,
-        category: certCategory,
-        dateIssued: certIssued,
-        dateExpired: certExpired,
-        photo: certPhoto, // base64 dataURL
-      };
+      // Filter out empty fields and validate dates
+      const payload = {};
+      if (certName) payload.name = certName;
+      if (certProvider) payload.provider = certProvider;
+      if (certNumber) payload.certificateNumber = certNumber;
+      if (certCategory) payload.category = certCategory;
+      
+      // Only add dates if they are valid YYYY-MM-DD format
+      if (certIssued && /^\d{4}-\d{2}-\d{2}$/.test(certIssued)) {
+        payload.dateIssued = certIssued;
+      }
+      if (certExpired && /^\d{4}-\d{2}-\d{2}$/.test(certExpired)) {
+        payload.dateExpired = certExpired;
+      }
+      
+      if (certPhoto) payload.photo = certPhoto;
 
-      const updated = await addUserCertificate(user._id || user.id, payload);
+      console.log('Certificate payload:', payload);
+      const userId = user._id || user.id;
+      const updated = await addUserCertificate(userId, payload);
       setUser(updated);
 
       // reset form
@@ -258,18 +269,28 @@ export default function Profile() {
               value={certCategory}
               onChange={(e) => setCertCategory(e.target.value)}
             />
-            <input
-              className="border rounded-lg px-3 py-2 text-sm"
-              placeholder="Tanggal terbit (YYYY-MM-DD)"
-              value={certIssued}
-              onChange={(e) => setCertIssued(e.target.value)}
-            />
-            <input
-              className="border rounded-lg px-3 py-2 text-sm"
-              placeholder="Tanggal expired (YYYY-MM-DD)"
-              value={certExpired}
-              onChange={(e) => setCertExpired(e.target.value)}
-            />
+            <div>
+              <label className="block text-xs text-slate-600 mb-1">
+                Tanggal Terbit
+              </label>
+              <input
+                type="date"
+                className="border rounded-lg px-3 py-2 text-sm w-full"
+                value={certIssued}
+                onChange={(e) => setCertIssued(e.target.value)}
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-slate-600 mb-1">
+                Tanggal Expired
+              </label>
+              <input
+                type="date"
+                className="border rounded-lg px-3 py-2 text-sm w-full"
+                value={certExpired}
+                onChange={(e) => setCertExpired(e.target.value)}
+              />
+            </div>
 
             <div className="sm:col-span-2">
               <label className="block text-xs text-slate-600 mb-1">

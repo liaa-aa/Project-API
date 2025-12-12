@@ -47,17 +47,18 @@ export default class usersController {
   }
   // POST /users/:id/certificates
   public async addCertificate({ request, params, response }: HttpContext) {
-    const loggedInUser = (request as any).user
-    const targetUserId = params.id
+    try {
+      const loggedInUser = (request as any).user
+      const targetUserId = params.id
 
-    if (!loggedInUser) {
-      return response.unauthorized({ message: 'Tidak terautentikasi' })
-    }
+      if (!loggedInUser) {
+        return response.unauthorized({ message: 'Tidak terautentikasi' })
+      }
 
-    // Hanya user sendiri atau admin yg boleh nambah sertifikat
-    if (loggedInUser.id !== targetUserId && loggedInUser.role !== 'admin') {
-      return response.forbidden({ message: 'Tidak diizinkan menambah sertifikat user lain' })
-    }
+      // Hanya user sendiri atau admin yg boleh nambah sertifikat
+      if (loggedInUser.id !== targetUserId && loggedInUser.role !== 'admin') {
+        return response.forbidden({ message: 'Tidak diizinkan menambah sertifikat user lain' })
+      }
 
     const payload = request.only([
       'name',
@@ -78,10 +79,27 @@ export default class usersController {
       return response.notFound({ message: 'User not found' })
     }
 
+    // Pastikan certificates array ada
+    if (!user.certificates) {
+      user.certificates = []
+    }
+
+    // Convert date strings to Date objects
+    if (payload.dateIssued) {
+      payload.dateIssued = new Date(payload.dateIssued)
+    }
+    if (payload.dateExpired) {
+      payload.dateExpired = new Date(payload.dateExpired)
+    }
+
     user.certificates.push(payload)
     await user.save()
 
     return response.ok(user)
+    } catch (error) {
+      console.error('Add certificate error:', error)
+      return response.internalServerError({ message: 'Terjadi kesalahan server' })
+    }
   }
   public async updateCertificate({ request, params, response }: HttpContext) {
     const loggedInUser = (request as any).user
@@ -147,6 +165,6 @@ export default class usersController {
 
     await user.save()
 
-    return response.ok({ message: 'Sertifikat berhasil dihapus' })
+    return response.ok(user)
   }
 }

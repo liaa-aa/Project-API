@@ -27,7 +27,7 @@ const UserSchema = new mongoose.Schema(
 
     certificates: {
       type: [CertificateSchema],
-      default: [],
+      default: () => [],
     }
   },
   {
