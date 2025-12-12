@@ -18,471 +18,339 @@ export default function Profile() {
   const [message, setMessage] = useState("");
 
   // sertifikat
-  const [certificates, setCertificates] = useState([]);
-  const [loadingCertificates, setLoadingCertificates] = useState(false);
+  const [certName, setCertName] = useState("");
+  const [certProvider, setCertProvider] = useState("");
+  const [certNumber, setCertNumber] = useState("");
+  const [certCategory, setCertCategory] = useState("");
+  const [certIssued, setCertIssued] = useState("");
+  const [certExpired, setCertExpired] = useState("");
 
-  const [certLoading, setCertLoading] = useState(false);
-  const [certError, setCertError] = useState("");
+  // foto sertifikat (dataURL/base64)
+  const [certPhoto, setCertPhoto] = useState("");
 
-  const [certForm, setCertForm] = useState({
-    name: "",
-    provider: "",
-    certificateNumber: "",
-    category: "",
-    dateIssued: "",
-    dateExpired: "",
-    photo: "",
-  });
-
-  // ambil user dari localStorage + profil lengkap (termasuk certificates) dari BE
   useEffect(() => {
-    const current = getLocalUser();
-    if (current) {
-      setUser(current);
-      setName(current.name || "");
+    const init = async () => {
+      const local = getLocalUser();
+      if (!local) return;
 
-      const id = current.id || current._id;
-      if (id) {
-        (async () => {
-          try {
-            setLoadingCertificates(true);
-            const full = await getUserProfile(id);
-            setCertificates(full.certificates || []);
-          } catch (err) {
-            console.error("Gagal mengambil sertifikat:", err);
-          } finally {
-            setLoadingCertificates(false);
-          }
-        })();
+      setLoading(true);
+      setMessage("");
+
+      try {
+        const data = await getUserProfile(local.id || local._id);
+        setUser(data);
+        setName(data?.name || "");
+      } catch (err) {
+        setMessage(err.message || "Gagal memuat profil");
+      } finally {
+        setLoading(false);
       }
-    }
+    };
+
+    init();
   }, []);
 
-  const handleSaveProfile = async (e) => {
-    e.preventDefault();
+  const handleSaveProfile = async () => {
     if (!user) return;
-
     setLoading(true);
     setMessage("");
 
     try {
-      const id = user.id || user._id;
-      const updated = await updateUserProfile(id, { name });
-
-      const normalizedUser = {
-        id: updated.id || updated._id || user.id,
-        name: updated.name,
-        email: updated.email,
-        role: updated.role,
-      };
-
-      localStorage.setItem("user", JSON.stringify(normalizedUser));
-      setUser(normalizedUser);
-
-      setMessage("Profil berhasil diperbarui!");
+      const updated = await updateUserProfile(user._id || user.id, { name });
+      setUser(updated);
+      setEditing(false);
+      setMessage("Profil berhasil diperbarui.");
     } catch (err) {
-      console.error(err);
-      setMessage(err.message || "Gagal memperbarui profil.");
+      setMessage(err.message || "Gagal update profil");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleToggleEditing = () => {
-    setEditing((prev) => !prev);
-    setMessage("");
-    setCertError("");
-    // kalau keluar dari mode edit, reset form sertifikat
-    if (editing) {
-      setCertForm({
-        name: "",
-        provider: "",
-        certificateNumber: "",
-        category: "",
-        dateIssued: "",
-        dateExpired: "",
-        photo: "",
-      });
-    }
+  const handleSelectPhoto = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // convert ke base64 dataURL agar bisa disimpan di backend sebagai string
+    const reader = new FileReader();
+    reader.onload = () => {
+      setCertPhoto(String(reader.result || ""));
+    };
+    reader.readAsDataURL(file);
   };
 
-  const handleCertFormChange = (e) => {
-    const { name, value } = e.target;
-    setCertForm((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-  };
-
-  const handleAddCertificate = async (e) => {
-    e.preventDefault();
+  const handleAddCertificate = async () => {
     if (!user) return;
-
-    setCertLoading(true);
-    setCertError("");
+    setLoading(true);
     setMessage("");
 
     try {
-      const id = user.id || user._id;
-
       const payload = {
-        name: certForm.name,
-        provider: certForm.provider || undefined,
-        certificateNumber: certForm.certificateNumber || undefined,
-        category: certForm.category || undefined,
-        photo: certForm.photo || undefined,
-        dateIssued: certForm.dateIssued || undefined,
-        dateExpired: certForm.dateExpired || undefined,
+        name: certName,
+        provider: certProvider,
+        certificateNumber: certNumber,
+        category: certCategory,
+        dateIssued: certIssued,
+        dateExpired: certExpired,
+        photo: certPhoto, // base64 dataURL
       };
 
-      if (!payload.name) {
-        throw new Error("Nama sertifikat wajib diisi");
-      }
+      const updated = await addUserCertificate(user._id || user.id, payload);
+      setUser(updated);
 
-      const updatedUser = await addUserCertificate(id, payload);
-
-      setCertificates(updatedUser.certificates || []);
-
-      setCertForm({
-        name: "",
-        provider: "",
-        certificateNumber: "",
-        category: "",
-        dateIssued: "",
-        dateExpired: "",
-        photo: "",
-      });
+      // reset form
+      setCertName("");
+      setCertProvider("");
+      setCertNumber("");
+      setCertCategory("");
+      setCertIssued("");
+      setCertExpired("");
+      setCertPhoto("");
 
       setMessage("Sertifikat berhasil ditambahkan.");
     } catch (err) {
-      console.error(err);
-      setCertError(err.message || "Gagal menambah sertifikat.");
+      setMessage(err.message || "Gagal menambah sertifikat");
     } finally {
-      setCertLoading(false);
+      setLoading(false);
     }
   };
 
-  const handleDeleteCertificate = async (certId) => {
+  const handleDeleteCert = async (certId) => {
     if (!user) return;
-    if (!window.confirm("Yakin ingin menghapus sertifikat ini?")) return;
+    const ok = window.confirm("Hapus sertifikat ini?");
+    if (!ok) return;
+
+    setLoading(true);
+    setMessage("");
 
     try {
-      const id = user.id || user._id;
-      await deleteUserCertificate(id, certId);
-
-      setCertificates((prev) =>
-        prev.filter((c) => String(c._id) !== String(certId))
-      );
+      const updated = await deleteUserCertificate(user._id || user.id, certId);
+      setUser(updated);
       setMessage("Sertifikat berhasil dihapus.");
     } catch (err) {
-      console.error(err);
-      setMessage(err.message || "Gagal menghapus sertifikat.");
+      setMessage(err.message || "Gagal menghapus sertifikat");
+    } finally {
+      setLoading(false);
     }
   };
 
   if (!user) {
     return (
-      <div className="min-h-screen flex justify-center items-center text-slate-500">
-        Memuat profil...
+      <div className="max-w-3xl mx-auto px-4 py-24">
+        <h2 className="text-xl font-bold mb-2">Profil</h2>
+        {loading ? (
+          <p className="text-sm text-slate-500">Memuat...</p>
+        ) : (
+          <p className="text-sm text-slate-500">
+            Silakan login terlebih dahulu.
+          </p>
+        )}
+        {message && (
+          <div className="mt-3 text-sm text-red-600 bg-red-50 border border-red-200 px-3 py-2 rounded">
+            {message}
+          </div>
+        )}
       </div>
     );
   }
 
-  const roleLabel = user.role === "admin" ? "Administrator" : "Relawan";
-
   return (
-    <div className="min-h-screen bg-slate-50 px-4 py-10 flex justify-center">
-      <div className="w-full max-w-xl">
-        <div className="bg-white rounded-2xl shadow-md border border-slate-100 px-6 py-7">
-          {/* HEADER */}
-          <div className="flex justify-between items-start mb-5">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-wide text-blue-600">
-                Profil
-              </p>
-              <h1 className="text-xl md:text-2xl font-bold text-slate-900">
-                Informasi Akun & Sertifikat
-              </h1>
-            </div>
+    <div className="max-w-3xl mx-auto px-4 py-24">
+      <h2 className="text-2xl font-bold mb-6">Profil Relawan</h2>
 
+      {message && (
+        <div className="mb-4 text-sm text-slate-700 bg-slate-50 border border-slate-200 px-3 py-2 rounded">
+          {message}
+        </div>
+      )}
+
+      {/* Basic Info */}
+      <div className="bg-white border border-slate-100 shadow-sm rounded-2xl p-5 mb-6">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-sm font-semibold text-slate-800">Informasi</h3>
+          {!editing ? (
             <button
-              onClick={handleToggleEditing}
-              className="text-sm px-4 py-1.5 rounded-xl bg-blue-700 text-white hover:bg-blue-800 transition"
+              onClick={() => setEditing(true)}
+              className="text-xs px-3 py-1.5 rounded-lg bg-slate-900 text-white"
+              disabled={loading}
             >
-              {editing ? "Selesai" : "Edit Profil"}
+              Edit
             </button>
-          </div>
-
-          {/* PESAN GLOBAL */}
-          {message && (
-            <div className="mb-4 text-xs bg-blue-50 text-blue-700 border border-blue-200 px-3 py-2 rounded-xl">
-              {message}
-            </div>
-          )}
-
-          {/* INFO DASAR */}
-          <div className="space-y-4 mb-6">
-            <div className="flex justify-between items-center border-b border-slate-100 pb-2">
-              <span className="text-xs font-medium text-slate-500">Nama</span>
-              {editing ? (
-                <input
-                  type="text"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  className="ml-4 flex-1 max-w-[60%] rounded-xl border border-slate-200 px-3 py-1.5 text-xs focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                />
-              ) : (
-                <span className="text-sm font-semibold text-slate-800">
-                  {user.name}
-                </span>
-              )}
-            </div>
-
-            <ProfileItem label="Email" value={user.email} />
-            <ProfileItem label="Peran" value={roleLabel} />
-          </div>
-
-          {/* SECTION SERTIFIKAT */}
-          <div className="border-t border-slate-200 pt-5 mt-3">
-            <div className="flex items-center justify-between mb-2">
-              <h2 className="text-sm font-semibold text-slate-800">
-                Sertifikat
-              </h2>
-              {!editing && (
-                <span className="text-[10px] text-slate-500">
-                  Klik &quot;Edit Profil&quot; untuk menambah / menghapus
-                  sertifikat
-                </span>
-              )}
-            </div>
-
-            {loadingCertificates && (
-              <p className="text-xs text-slate-500 mb-2">
-                Memuat sertifikat...
-              </p>
-            )}
-
-            {/* FORM TAMBAH SERTIFIKAT – hanya saat editing */}
-            {editing && (
-              <>
-                {certError && (
-                  <div className="mb-2 text-xs bg-red-50 text-red-700 border border-red-200 px-3 py-2 rounded-xl">
-                    {certError}
-                  </div>
-                )}
-
-                <form
-                  onSubmit={handleAddCertificate}
-                  className="mb-4 p-3 rounded-xl border border-slate-200 bg-slate-50 space-y-3"
-                >
-                  <div className="space-y-1">
-                    <label className="text-xs font-medium text-slate-700">
-                      Nama Sertifikat <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      name="name"
-                      value={certForm.name}
-                      onChange={handleCertFormChange}
-                      className="w-full rounded-xl border border-slate-200 px-3 py-2 text-xs focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                      placeholder="Contoh: Sertifikat Pelatihan Manajemen Bencana"
-                    />
-                  </div>
-
-                  <div className="space-y-1">
-                    <label className="text-xs font-medium text-slate-700">
-                      Penerbit / Provider
-                    </label>
-                    <input
-                      type="text"
-                      name="provider"
-                      value={certForm.provider}
-                      onChange={handleCertFormChange}
-                      className="w-full rounded-xl border border-slate-200 px-3 py-2 text-xs focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                      placeholder="Contoh: BNPB, PMI, dll."
-                    />
-                  </div>
-
-                  <div className="space-y-1">
-                    <label className="text-xs font-medium text-slate-700">
-                      Nomor Sertifikat
-                    </label>
-                    <input
-                      type="text"
-                      name="certificateNumber"
-                      value={certForm.certificateNumber}
-                      onChange={handleCertFormChange}
-                      className="w-full rounded-xl border border-slate-200 px-3 py-2 text-xs focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                      placeholder="Opsional"
-                    />
-                  </div>
-
-                  <div className="space-y-1">
-                    <label className="text-xs font-medium text-slate-700">
-                      Kategori
-                    </label>
-                    <input
-                      type="text"
-                      name="category"
-                      value={certForm.category}
-                      onChange={handleCertFormChange}
-                      className="w-full rounded-xl border border-slate-200 px-3 py-2 text-xs focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                      placeholder="Contoh: Pertolongan Pertama, Logistik, dsb."
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-1">
-                      <label className="text-xs font-medium text-slate-700">
-                        Tanggal Terbit
-                      </label>
-                      <input
-                        type="date"
-                        name="dateIssued"
-                        value={certForm.dateIssued}
-                        onChange={handleCertFormChange}
-                        className="w-full rounded-xl border border-slate-200 px-3 py-2 text-xs focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-xs font-medium text-slate-700">
-                        Tanggal Berakhir
-                      </label>
-                      <input
-                        type="date"
-                        name="dateExpired"
-                        value={certForm.dateExpired}
-                        onChange={handleCertFormChange}
-                        className="w-full rounded-xl border border-slate-200 px-3 py-2 text-xs focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-1">
-                    <label className="text-xs font-medium text-slate-700">
-                      URL Foto / Scan Sertifikat
-                    </label>
-                    <input
-                      type="text"
-                      name="photo"
-                      value={certForm.photo}
-                      onChange={handleCertFormChange}
-                      className="w-full rounded-xl border border-slate-200 px-3 py-2 text-xs focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                      placeholder="Link gambar sertifikat (opsional)"
-                    />
-                  </div>
-
-                  <button
-                    type="submit"
-                    disabled={certLoading}
-                    className={`px-4 py-1.5 rounded-xl text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-700 transition ${
-                      certLoading ? "opacity-50 cursor-not-allowed" : ""
-                    }`}
-                  >
-                    {certLoading ? "Menyimpan..." : "Tambah Sertifikat"}
-                  </button>
-                </form>
-              </>
-            )}
-
-            {/* LIST SERTIFIKAT */}
-            <div className="space-y-3">
-              {certificates && certificates.length > 0 ? (
-                certificates.map((cert) => (
-                  <div
-                    key={cert._id}
-                    className="border border-slate-200 rounded-xl px-3 py-2.5 text-xs flex justify-between gap-3"
-                  >
-                    <div className="space-y-1">
-                      <p className="font-semibold text-slate-800">
-                        {cert.name}
-                      </p>
-                      {cert.provider && (
-                        <p className="text-slate-600">
-                          Penerbit: {cert.provider}
-                        </p>
-                      )}
-                      {cert.certificateNumber && (
-                        <p className="text-slate-600">
-                          No: {cert.certificateNumber}
-                        </p>
-                      )}
-                      {cert.category && (
-                        <p className="text-slate-600">
-                          Kategori: {cert.category}
-                        </p>
-                      )}
-                      {(cert.dateIssued || cert.dateExpired) && (
-                        <p className="text-slate-500">
-                          {cert.dateIssued &&
-                            `Terbit: ${new Date(
-                              cert.dateIssued
-                            ).toLocaleDateString("id-ID")}`}
-                          {cert.dateIssued && cert.dateExpired && " • "}
-                          {cert.dateExpired &&
-                            `Berlaku s.d: ${new Date(
-                              cert.dateExpired
-                            ).toLocaleDateString("id-ID")}`}
-                        </p>
-                      )}
-                    </div>
-                    <div className="flex flex-col items-end justify-between">
-                      {cert.photo && (
-                        <a
-                          href={cert.photo}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="text-[10px] text-blue-600 underline mb-2"
-                        >
-                          Lihat foto
-                        </a>
-                      )}
-                      {editing && (
-                        <button
-                          type="button"
-                          onClick={() => handleDeleteCertificate(cert._id)}
-                          className="text-[10px] px-2 py-1 rounded-lg bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 transition"
-                        >
-                          Hapus
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <p className="text-xs text-slate-500">
-                  Belum ada sertifikat yang ditambahkan.
-                </p>
-              )}
-            </div>
-          </div>
-
-          {/* TOMBOL SIMPAN PROFIL – SEKARANG DI PALING BAWAH */}
-          {editing && (
-            <form
-              onSubmit={handleSaveProfile}
-              className="mt-6 pt-4 border-t border-slate-200 flex justify-end"
-            >
+          ) : (
+            <div className="flex gap-2">
               <button
-                type="submit"
+                onClick={handleSaveProfile}
+                className="text-xs px-3 py-1.5 rounded-lg bg-blue-600 text-white"
                 disabled={loading}
-                className={`px-5 py-2 rounded-xl text-sm font-semibold text-white bg-blue-700 hover:bg-blue-800 transition ${
-                  loading ? "opacity-50 cursor-not-allowed" : ""
-                }`}
               >
-                {loading ? "Menyimpan..." : "Simpan Perubahan Profil"}
+                Simpan
               </button>
-            </form>
+              <button
+                onClick={() => {
+                  setEditing(false);
+                  setName(user?.name || "");
+                }}
+                className="text-xs px-3 py-1.5 rounded-lg bg-slate-100 text-slate-700"
+                disabled={loading}
+              >
+                Batal
+              </button>
+            </div>
           )}
         </div>
+
+        <ProfileRow
+          label="Nama"
+          value={
+            editing ? (
+              <input
+                className="border rounded-lg px-3 py-2 text-sm w-full"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Nama"
+              />
+            ) : (
+              user?.name || "-"
+            )
+          }
+        />
+        <ProfileRow label="Email" value={user?.email || "-"} />
+        <ProfileRow label="Role" value={user?.role || "-"} />
+      </div>
+
+      {/* Certificates */}
+      <div className="bg-white border border-slate-100 shadow-sm rounded-2xl p-5">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-sm font-semibold text-slate-800">Sertifikat</h3>
+          <span className="text-xs text-slate-500">
+            {user?.certificates?.length || 0} item
+          </span>
+        </div>
+
+        {/* Add Certificate Form */}
+        <div className="border rounded-2xl p-4 bg-slate-50 mb-4">
+          <p className="text-sm font-semibold text-slate-800 mb-3">
+            Tambah Sertifikat
+          </p>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <input
+              className="border rounded-lg px-3 py-2 text-sm"
+              placeholder="Nama sertifikat"
+              value={certName}
+              onChange={(e) => setCertName(e.target.value)}
+            />
+            <input
+              className="border rounded-lg px-3 py-2 text-sm"
+              placeholder="Provider"
+              value={certProvider}
+              onChange={(e) => setCertProvider(e.target.value)}
+            />
+            <input
+              className="border rounded-lg px-3 py-2 text-sm"
+              placeholder="Nomor sertifikat"
+              value={certNumber}
+              onChange={(e) => setCertNumber(e.target.value)}
+            />
+            <input
+              className="border rounded-lg px-3 py-2 text-sm"
+              placeholder="Kategori"
+              value={certCategory}
+              onChange={(e) => setCertCategory(e.target.value)}
+            />
+            <input
+              className="border rounded-lg px-3 py-2 text-sm"
+              placeholder="Tanggal terbit (YYYY-MM-DD)"
+              value={certIssued}
+              onChange={(e) => setCertIssued(e.target.value)}
+            />
+            <input
+              className="border rounded-lg px-3 py-2 text-sm"
+              placeholder="Tanggal expired (YYYY-MM-DD)"
+              value={certExpired}
+              onChange={(e) => setCertExpired(e.target.value)}
+            />
+
+            <div className="sm:col-span-2">
+              <label className="block text-xs text-slate-600 mb-1">
+                Upload Foto Sertifikat
+              </label>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleSelectPhoto}
+                className="text-sm"
+              />
+              {certPhoto && (
+                <img
+                  src={certPhoto}
+                  alt="preview"
+                  className="mt-2 w-48 rounded-xl border border-slate-200"
+                />
+              )}
+            </div>
+          </div>
+
+          <button
+            onClick={handleAddCertificate}
+            className="mt-3 text-xs px-4 py-2 rounded-lg bg-blue-600 text-white"
+            disabled={loading || !certName}
+          >
+            Tambahkan
+          </button>
+        </div>
+
+        {/* Certificate List */}
+        {!user?.certificates || user.certificates.length === 0 ? (
+          <p className="text-sm text-slate-500">Belum ada sertifikat.</p>
+        ) : (
+          <div className="space-y-3">
+            {user.certificates.map((c) => (
+              <div
+                key={c._id || c.id}
+                className="border rounded-2xl p-4 flex items-start justify-between gap-4"
+              >
+                <div>
+                  <p className="text-sm font-semibold text-slate-800">
+                    {c.name || "-"}
+                  </p>
+                  <p className="text-xs text-slate-600 mt-1">
+                    Provider: {c.provider || "-"} • No:{" "}
+                    {c.certificateNumber || "-"}
+                  </p>
+                  <p className="text-xs text-slate-600">
+                    Kategori: {c.category || "-"} • Terbit:{" "}
+                    {c.dateIssued || "-"} • Exp: {c.dateExpired || "-"}
+                  </p>
+
+                  {c.photo && (
+                    <img
+                      src={c.photo}
+                      alt="sertifikat"
+                      className="mt-2 w-48 rounded-xl border border-slate-200"
+                    />
+                  )}
+                </div>
+
+                <button
+                  onClick={() => handleDeleteCert(c._id || c.id)}
+                  className="text-xs px-3 py-1.5 rounded-lg bg-red-600 text-white"
+                  disabled={loading}
+                >
+                  Hapus
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
 }
 
-function ProfileItem({ label, value }) {
+function ProfileRow({ label, value }) {
   return (
-    <div className="flex justify-between items-center border-b border-slate-100 pb-2">
+    <div className="flex items-center justify-between gap-4 border-b border-slate-100 pb-2">
       <span className="text-xs font-medium text-slate-500">{label}</span>
       <span className="text-sm font-semibold text-slate-800">{value}</span>
     </div>

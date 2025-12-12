@@ -14,116 +14,101 @@ export const getLocalUser = () => {
   }
 };
 
-// Header dengan token untuk endpoint yang butuh Auth
+// Header dengan token untuk endpoint yang butuh auth
 const getAuthHeaders = () => {
   const token = localStorage.getItem("token");
   return token
     ? {
-        "Content-Type": "application/json",
         Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
       }
     : { "Content-Type": "application/json" };
 };
 
-// Ambil profil user lengkap (GET /users/:id)
-export const getUserProfile = async (id) => {
-  const res = await fetch(`${API_BASE_URL}/users/${id}`, {
-    method: "GET",
-    headers: {
-      "Content-Type": "application/json",
-      // GET sebenarnya tidak wajib auth, tapi kalau ada token sekalian kirim saja
-      ...getAuthHeaders(),
-    },
-  });
-
-  const data = await res.json().catch(() => ({}));
-
-  if (!res.ok) {
-    throw new Error(data.message || "Gagal mengambil data profil user");
-  }
-
-  // BE mengembalikan dokumen User secara langsung (dari Mongo):
-  // { _id, name, email, role, certificates, ... }
-  return data;
-};
-
-// Update profil user (PUT /users/:id)
-// payload bisa berisi { name, email } (dan field lain jika nanti perlu)
-export const updateUserProfile = async (id, payload) => {
-  const res = await fetch(`${API_BASE_URL}/users/${id}`, {
-    method: "PUT",
-    headers: getAuthHeaders(),
-    body: JSON.stringify(payload),
-  });
-
-  const data = await res.json().catch(() => ({}));
-
-  if (!res.ok) {
-    throw new Error(data.message || "Gagal mengupdate profil user");
-  }
-
-  // BE balas user yang sudah di-update
-  return data;
-};
-
-/* =========================
- *  API SERTIFIKAT USER
- * ======================= */
-
-// Tambah sertifikat (POST /users/:id/certificates)
-export const addUserCertificate = async (userId, payload) => {
-  const res = await fetch(`${API_BASE_URL}/users/${userId}/certificates`, {
-    method: "POST",
-    headers: getAuthHeaders(),
-    body: JSON.stringify(payload),
-  });
-
-  const data = await res.json().catch(() => ({}));
-
-  if (!res.ok) {
-    throw new Error(data.message || "Gagal menambah sertifikat");
-  }
-
-  // BE mengembalikan user yang sudah di-update (dengan certificates terbaru)
-  return data;
-};
-
-// Hapus sertifikat (DELETE /users/:id/certificates/:certId)
-export const deleteUserCertificate = async (userId, certId) => {
-  const res = await fetch(
-    `${API_BASE_URL}/users/${userId}/certificates/${certId}`,
-    {
-      method: "DELETE",
+// Ambil profil user berdasarkan ID
+export const getUserProfile = async (userId) => {
+  try {
+    const res = await fetch(`${API_BASE_URL}/users/${userId}`, {
+      method: "GET",
       headers: getAuthHeaders(),
+    });
+
+    const data = await res.json().catch(() => ({}));
+
+    if (!res.ok) {
+      throw new Error(data.message || "Gagal mengambil profil");
     }
-  );
 
-  const data = await res.json().catch(() => ({}));
-
-  if (!res.ok) {
-    throw new Error(data.message || "Gagal menghapus sertifikat");
+    return data;
+  } catch (err) {
+    throw new Error(err.message || "Gagal mengambil profil");
   }
-
-  // BE hanya balas { message: ... }, jadi kita return apa adanya
-  return data;
 };
 
-// (opsional kalau nanti mau edit sertifikat)
-// export const updateUserCertificate = async (userId, certId, payload) => {
-//   const res = await fetch(
-//     `${API_BASE_URL}/users/${userId}/certificates/${certId}`,
-//     {
-//       method: "PUT",
-//       headers: getAuthHeaders(),
-//       body: JSON.stringify(payload),
-//     }
-//   );
+// Update profil user (contoh: name)
+export const updateUserProfile = async (userId, payload) => {
+  try {
+    const res = await fetch(`${API_BASE_URL}/users/${userId}`, {
+      method: "PUT",
+      headers: getAuthHeaders(),
+      body: JSON.stringify(payload),
+    });
 
-//   const data = await res.json().catch(() => ({}));
+    const data = await res.json().catch(() => ({}));
 
-//   if (!res.ok) {
-//     throw new Error(data.message || "Gagal mengupdate sertifikat");
-//   }
+    if (!res.ok) {
+      throw new Error(data.message || "Gagal update profil");
+    }
 
-//   return data; // user ter-update
-// };
+    return data;
+  } catch (err) {
+    throw new Error(err.message || "Gagal update profil");
+  }
+};
+
+// Tambah sertifikat user
+export const addUserCertificate = async (userId, payload) => {
+  try {
+    const res = await fetch(`${API_BASE_URL}/users/${userId}/certificates`, {
+      method: "POST",
+      headers: getAuthHeaders(),
+      body: JSON.stringify(payload),
+    });
+
+    const data = await res.json().catch(() => ({}));
+
+    if (!res.ok) {
+      throw new Error(data.message || "Gagal menambah sertifikat");
+    }
+
+    return data; // user ter-update
+  } catch (err) {
+    throw new Error(err.message || "Gagal menambah sertifikat");
+  }
+};
+
+// Hapus sertifikat user
+export const deleteUserCertificate = async (userId, certId) => {
+  try {
+    const res = await fetch(
+      `${API_BASE_URL}/users/${userId}/certificates/${certId}`,
+      {
+        method: "DELETE",
+        headers: getAuthHeaders(),
+      }
+    );
+
+    const data = await res.json().catch(() => ({}));
+
+    if (!res.ok) {
+      throw new Error(data.message || "Gagal menghapus sertifikat");
+    }
+
+    return data; // user ter-update
+  } catch (err) {
+    throw new Error(err.message || "Gagal menghapus sertifikat");
+  }
+};
+
+// NOTE: Di ZIP ada komentar implementasi update sertifikat,
+// tapi fitur update belum dipakai di FE.

@@ -62,8 +62,6 @@ export const adminFetchEvents = async () => {
   return data?.getBencana || [];
 };
 
-
-
 // ===================
 // CRUD EVENT (GraphQL: createBencana, updateBencana, deleteBencana)
 // ===================
@@ -169,7 +167,6 @@ export const deleteEvent = async (id) => {
   return !!data?.deleteBencana;
 };
 
-
 // ===================
 // CRUD USER (REST: /users, hanya admin)
 // ===================
@@ -187,14 +184,11 @@ export const adminFetchUsers = async () => {
     throw new Error(data.message || "Gagal memuat daftar user");
   }
 
-  // backend mengembalikan array dokumen User MongoDB
-  // [{ _id, name, email, role, ... }, ...]
   return data;
 };
 
 // Tambah user baru (role default: relawan)
 export const adminCreateUser = async (payload) => {
-  // payload: { name, email, password }
   const res = await fetch(`${API_BASE_URL}/users`, {
     method: "POST",
     headers: getAuthHeaders(),
@@ -211,7 +205,7 @@ export const adminCreateUser = async (payload) => {
     throw new Error(data.message || "Gagal membuat user");
   }
 
-  return data; // dokumen user yang baru dibuat
+  return data;
 };
 
 // Update user (bisa tanpa ganti password)
@@ -221,7 +215,6 @@ export const adminUpdateUser = async (id, payload) => {
     email: payload.email,
   };
 
-  // kalau password diisi, baru kirim ke backend
   if (payload.password) {
     body.password = payload.password;
   }
@@ -238,7 +231,7 @@ export const adminUpdateUser = async (id, payload) => {
     throw new Error(data.message || "Gagal mengupdate user");
   }
 
-  return data; // dokumen user yang sudah diupdate
+  return data;
 };
 
 // Hapus user
@@ -254,7 +247,7 @@ export const adminDeleteUser = async (id) => {
     throw new Error(data.message || "Gagal menghapus user");
   }
 
-  return data; // { message: 'User deleted successfully' }
+  return data;
 };
 
 // ===================
@@ -294,7 +287,7 @@ export const fetchVolunteersByEvent = async (bencanaId) => {
           userMap[userId] = user;
         }
       } catch {
-        // abaikan error, nanti fallback ke "-"
+        // abaikan
       }
     })
   );
