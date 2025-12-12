@@ -94,15 +94,14 @@ export default function Profile() {
     const local = getLocalUser();
     setUser(local);
 
-    const uid = getLocalUserId();
-    if (!uid) {
-      setMessage("User ID tidak ditemukan. Silakan logout lalu login ulang.");
-      return;
-    }
+      const userId = local.id || local._id;
+
+      setLoading(true);
+      setMessage("");
 
     (async () => {
       try {
-        const data = await getUserProfile(uid);
+        const data = await getUserProfile(userId);
         setUser(data);
         setName(data?.name || "");
       } catch (err) {
@@ -232,27 +231,27 @@ export default function Profile() {
 
     setLoading(true);
     try {
-      const payload = {
-        name: certName,
-        provider: certProvider,
-        certificateNumber: certNumber,
-        category: certCategory,
-        dateIssued: certIssued,
-        dateExpired: certExpired,
-        photo: certPhoto, // ✅ dataURL hasil kompres
-      };
+      // Filter out empty fields and validate dates
+      const payload = {};
+      if (certName) payload.name = certName;
+      if (certProvider) payload.provider = certProvider;
+      if (certNumber) payload.certificateNumber = certNumber;
+      if (certCategory) payload.category = certCategory;
+      
+      // Only add dates if they are valid YYYY-MM-DD format
+      if (certIssued && /^\d{4}-\d{2}-\d{2}$/.test(certIssued)) {
+        payload.dateIssued = certIssued;
+      }
+      if (certExpired && /^\d{4}-\d{2}-\d{2}$/.test(certExpired)) {
+        payload.dateExpired = certExpired;
+      }
+      
+      if (certPhoto) payload.photo = certPhoto;
 
-      // debug
-      console.log(
-        "ADD CERT -> uid:",
-        uid,
-        "token?",
-        !!token,
-        "photoLen:",
-        certPhoto.length
-      );
+      console.log('Certificate payload:', payload);
+      const userId = user._id || user.id;
+      const updated = await addUserCertificate(userId, payload);
 
-      const updated = await addUserCertificate(uid, payload);
       setUser(updated);
       resetCertificateForm();
       setMessage("Sertifikat berhasil ditambahkan");
@@ -403,17 +402,53 @@ export default function Profile() {
                 />
               </div>
 
-              <div>
-                <label className="block text-xs text-slate-600 mb-1">
-                  Provider (opsional)
-                </label>
-                <input
-                  className="border rounded-lg px-3 py-2 text-sm w-full"
-                  placeholder="Contoh: BNSP, Kemkes"
-                  value={certProvider}
-                  onChange={(e) => setCertProvider(e.target.value)}
-                />
-              </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <input
+              className="border rounded-lg px-3 py-2 text-sm"
+              placeholder="Nama sertifikat"
+              value={certName}
+              onChange={(e) => setCertName(e.target.value)}
+            />
+            <input
+              className="border rounded-lg px-3 py-2 text-sm"
+              placeholder="Provider"
+              value={certProvider}
+              onChange={(e) => setCertProvider(e.target.value)}
+            />
+            <input
+              className="border rounded-lg px-3 py-2 text-sm"
+              placeholder="Nomor sertifikat"
+              value={certNumber}
+              onChange={(e) => setCertNumber(e.target.value)}
+            />
+            <input
+              className="border rounded-lg px-3 py-2 text-sm"
+              placeholder="Kategori"
+              value={certCategory}
+              onChange={(e) => setCertCategory(e.target.value)}
+            />
+            <div>
+              <label className="block text-xs text-slate-600 mb-1">
+                Tanggal Terbit
+              </label>
+              <input
+                type="date"
+                className="border rounded-lg px-3 py-2 text-sm w-full"
+                value={certIssued}
+                onChange={(e) => setCertIssued(e.target.value)}
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-slate-600 mb-1">
+                Tanggal Expired
+              </label>
+              <input
+                type="date"
+                className="border rounded-lg px-3 py-2 text-sm w-full"
+                value={certExpired}
+                onChange={(e) => setCertExpired(e.target.value)}
+              />
+            </div>
 
               <div>
                 <label className="block text-xs text-slate-600 mb-1">

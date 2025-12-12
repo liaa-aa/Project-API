@@ -53,7 +53,8 @@ export const adminFetchEvents = async () => {
         type
         date
         maxVolunteers
-        currentVolunteers  
+        currentVolunteers
+        photo
       }
     }
   `;
@@ -75,7 +76,8 @@ export const createEvent = async (payload) => {
       $location: String!,
       $type: String!,
       $date: String!,
-      $maxVolunteers: Int!
+      $maxVolunteers: Int!,
+      $photo: String
     ) {
       createBencana(
         title: $title,
@@ -83,7 +85,8 @@ export const createEvent = async (payload) => {
         location: $location,
         type: $type,
         date: $date,
-        maxVolunteers: $maxVolunteers
+        maxVolunteers: $maxVolunteers,
+        photo: $photo
       ) {
         id
         title
@@ -92,6 +95,7 @@ export const createEvent = async (payload) => {
         type
         date
         maxVolunteers
+        photo
       }
     }
   `;
@@ -103,6 +107,7 @@ export const createEvent = async (payload) => {
     type: payload.type,
     date: payload.date,
     maxVolunteers: payload.maxVolunteers,
+    photo: payload.photo || null,
   };
 
   const data = await graphqlRequest(query, variables);
@@ -118,7 +123,8 @@ export const updateEvent = async (id, payload) => {
       $location: String!,
       $type: String!,
       $date: String!,
-      $maxVolunteers: Int!
+      $maxVolunteers: Int!,
+      $photo: String
     ) {
       updateBencana(
         id: $id,
@@ -127,7 +133,8 @@ export const updateEvent = async (id, payload) => {
         location: $location,
         type: $type,
         date: $date,
-        maxVolunteers: $maxVolunteers
+        maxVolunteers: $maxVolunteers,
+        photo: $photo
       ) {
         id
         title
@@ -136,6 +143,7 @@ export const updateEvent = async (id, payload) => {
         type
         date
         maxVolunteers
+        photo
       }
     }
   `;
@@ -148,6 +156,7 @@ export const updateEvent = async (id, payload) => {
     type: payload.type,
     date: payload.date,
     maxVolunteers: payload.maxVolunteers,
+    photo: payload.photo || null,
   };
 
   const data = await graphqlRequest(query, variables);

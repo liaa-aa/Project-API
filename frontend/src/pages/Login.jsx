@@ -14,23 +14,16 @@ export default function Login() {
   const [error, setError] = useState("");
 
   // callback ketika login Google sukses
-  const handleGoogleSuccess = async (response) => {
-    try {
-      const credential = response.credential;
-      const data = await googleLogin(credential);
+  const handleGoogleSuccess = (data) => {
+    // GoogleLoginButton sudah handle request ke backend dan simpan token
+    // Kita hanya perlu redirect berdasarkan role
+    localStorage.setItem("user", JSON.stringify(data.user));
 
-      localStorage.setItem("token", data.token);
-      localStorage.setItem("user", JSON.stringify(data.user));
-
-      // 🔥 Cek role, arahkan ke halaman yang tepat
-      if (data.user?.role === "admin") {
-        navigate("/admin"); // -> AdminLayout + sidebar
-      } else {
-        navigate("/"); // -> Home user biasa
-      }
-    } catch (err) {
-      console.error(err);
-      setError("Gagal login dengan Google.");
+    // 🔥 Cek role, arahkan ke halaman yang tepat
+    if (data.user?.role === "admin") {
+      navigate("/admin"); // -> AdminLayout + sidebar
+    } else {
+      navigate("/"); // -> Home user biasa
     }
   };
 
