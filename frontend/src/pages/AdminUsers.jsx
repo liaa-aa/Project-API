@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import {
   adminFetchUsers,
+  adminFetchUserById,
   adminCreateUser,
   adminUpdateUser,
   adminDeleteUser,
@@ -23,7 +24,7 @@ export default function AdminUsers() {
   const [isEditing, setIsEditing] = useState(false);
   const [editId, setEditId] = useState(null);
 
-  // ✅ state untuk modal detail relawan (tanpa halaman baru)
+  // ✅ state untuk modal detail (tanpa halaman baru)
   const [detailOpen, setDetailOpen] = useState(false);
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailError, setDetailError] = useState("");
@@ -85,6 +86,7 @@ export default function AdminUsers() {
       setError("");
       await adminDeleteUser(id);
       await loadUsers();
+
       // kalau user yang sedang dibuka detail dihapus
       if (detailUser && (detailUser._id || detailUser.id) === id) {
         setDetailOpen(false);
@@ -130,7 +132,7 @@ export default function AdminUsers() {
     }
   };
 
-  // ✅ buka detail relawan tanpa halaman baru
+  // ✅ buka detail user tanpa halaman baru
   const handleOpenDetail = async (user) => {
     const id = user._id || user.id;
     if (!id) return;
@@ -144,7 +146,7 @@ export default function AdminUsers() {
       const data = await adminFetchUserById(id);
       setDetailUser(data);
     } catch (e) {
-      setDetailError(e.message || "Gagal memuat detail relawan");
+      setDetailError(e.message || "Gagal memuat detail user");
     } finally {
       setDetailLoading(false);
     }
@@ -276,7 +278,6 @@ export default function AdminUsers() {
             <div className="space-y-3 max-h-[480px] overflow-y-auto pr-1">
               {users.map((u) => {
                 const id = u._id || u.id;
-                const isRelawan = (u.role || "relawan") === "relawan";
 
                 return (
                   <div
@@ -295,16 +296,14 @@ export default function AdminUsers() {
                     </div>
 
                     <div className="flex flex-col gap-1">
-                      {/* ✅ Detail relawan di halaman yang sama */}
-                      {isRelawan && (
-                        <button
-                          type="button"
-                          onClick={() => handleOpenDetail(u)}
-                          className="px-3 py-1 rounded bg-slate-800 text-white text-xs"
-                        >
-                          Detail
-                        </button>
-                      )}
+                      {/* ✅ Detail untuk SEMUA user */}
+                      <button
+                        type="button"
+                        onClick={() => handleOpenDetail(u)}
+                        className="px-3 py-1 rounded bg-slate-800 text-white text-xs"
+                      >
+                        Detail
+                      </button>
 
                       <button
                         type="button"
@@ -330,17 +329,18 @@ export default function AdminUsers() {
         </div>
       </div>
 
-      {/* ✅ MODAL DETAIL RELAWAN (TANPA HALAMAN BARU) */}
+      {/* ✅ MODAL DETAIL USER (TANPA HALAMAN BARU) */}
       {detailOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
           <div className="w-full max-w-2xl bg-white rounded-2xl shadow-lg border border-slate-100">
             <div className="flex items-center justify-between px-5 py-4 border-b">
               <div>
                 <p className="text-sm font-semibold text-slate-800">
-                  Detail Relawan
+                  Detail User
                 </p>
                 <p className="text-xs text-slate-500">
-                  Data ini diambil dari endpoint <span className="font-mono">/users/:id</span>
+                  Data ini diambil dari endpoint{" "}
+                  <span className="font-mono">/users/:id</span>
                 </p>
               </div>
 
@@ -394,7 +394,7 @@ export default function AdminUsers() {
                     </div>
                   </div>
 
-                  {/* SERTIFIKAT (mirip section Profile.jsx) */}
+                  {/* SERTIFIKAT */}
                   <div className="border-t pt-4">
                     <div className="flex items-center justify-between mb-2">
                       <h3 className="text-sm font-semibold text-slate-800">
@@ -408,7 +408,7 @@ export default function AdminUsers() {
                     {(!detailUser.certificates ||
                       detailUser.certificates.length === 0) && (
                       <p className="text-xs text-slate-500">
-                        Relawan ini belum memiliki sertifikat.
+                        User ini belum memiliki sertifikat.
                       </p>
                     )}
 

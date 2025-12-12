@@ -1,17 +1,64 @@
+// frontend/src/pages/Profile.jsx
+
 import { useEffect, useState } from "react";
 import {
   getLocalUser,
+  getLocalUserId,
+  getLocalToken,
   getUserProfile,
   updateUserProfile,
   addUserCertificate,
   deleteUserCertificate,
 } from "../api/userApi";
 
+/**
+ * ✅ Kompres + resize gambar jadi dataURL yang lebih kecil
+ * - Default output: image/jpeg (lebih kecil daripada png)
+ * - maxWidth/maxHeight: 900px
+ * - quality: 0.75
+ */
+const compressImageToDataUrl = (file, opts = {}) =>
+  new Promise((resolve, reject) => {
+    const maxW = opts.maxWidth ?? 900;
+    const maxH = opts.maxHeight ?? 900;
+    const quality = opts.quality ?? 0.75; // 0..1
+    const mime = opts.mime ?? "image/jpeg"; // jpeg cenderung kecil
+
+    const img = new Image();
+    const reader = new FileReader();
+
+    reader.onload = () => {
+      img.onload = () => {
+        let { width, height } = img;
+
+        const ratio = Math.min(maxW / width, maxH / height, 1);
+        const newW = Math.round(width * ratio);
+        const newH = Math.round(height * ratio);
+
+        const canvas = document.createElement("canvas");
+        canvas.width = newW;
+        canvas.height = newH;
+
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0, newW, newH);
+
+        const dataUrl = canvas.toDataURL(mime, quality);
+        resolve(dataUrl);
+      };
+
+      img.onerror = () => reject(new Error("Gagal membaca gambar"));
+      img.src = reader.result;
+    };
+
+    reader.onerror = () => reject(new Error("Gagal membaca file"));
+    reader.readAsDataURL(file);
+  });
+
 export default function Profile() {
   const [user, setUser] = useState(null);
   const [editing, setEditing] = useState(false);
 
-  // edit profil dasar
+  // profil dasar
   const [name, setName] = useState("");
 
   const [loading, setLoading] = useState(false);
@@ -24,68 +71,165 @@ export default function Profile() {
   const [certCategory, setCertCategory] = useState("");
   const [certIssued, setCertIssued] = useState("");
   const [certExpired, setCertExpired] = useState("");
+  const [certPhoto, setCertPhoto] = useState(""); // dataURL hasil kompres
+  const [certError, setCertError] = useState("");
+  const [certPhotoMeta, setCertPhotoMeta] = useState({
+    originalName: "",
+    originalSize: 0,
+  });
 
-  // foto sertifikat (dataURL/base64)
-  const [certPhoto, setCertPhoto] = useState("");
+  const resetCertificateForm = () => {
+    setCertName("");
+    setCertProvider("");
+    setCertNumber("");
+    setCertCategory("");
+    setCertIssued("");
+    setCertExpired("");
+    setCertPhoto("");
+    setCertError("");
+    setCertPhotoMeta({ originalName: "", originalSize: 0 });
+  };
 
   useEffect(() => {
-    const init = async () => {
-      const local = getLocalUser();
-      if (!local) return;
+    const local = getLocalUser();
+    setUser(local);
 
       const userId = local.id || local._id;
 
       setLoading(true);
       setMessage("");
 
+    (async () => {
       try {
         const data = await getUserProfile(userId);
         setUser(data);
         setName(data?.name || "");
       } catch (err) {
-        setMessage(err.message || "Gagal memuat profil");
-      } finally {
-        setLoading(false);
+        setMessage(err?.message || "Gagal memuat profil");
       }
-    };
-
-    init();
+    })();
   }, []);
 
+  const handleEdit = () => {
+    setEditing(true);
+    setMessage("");
+  };
+
+  const handleCancel = () => {
+    setEditing(false);
+    setMessage("");
+    setName(user?.name || "");
+    resetCertificateForm();
+  };
+
   const handleSaveProfile = async () => {
-    if (!user) return;
+    const uid = getLocalUserId();
+    const token = getLocalToken();
+
+    if (!uid) {
+      setMessage("User ID tidak ditemukan. Silakan logout lalu login ulang.");
+      return;
+    }
+    if (!token) {
+      setMessage("Token tidak ditemukan. Silakan logout lalu login ulang.");
+      return;
+    }
+
     setLoading(true);
     setMessage("");
 
     try {
-      const updated = await updateUserProfile(user._id || user.id, { name });
+      const updated = await updateUserProfile(uid, { name });
       setUser(updated);
       setEditing(false);
-      setMessage("Profil berhasil diperbarui.");
+      setMessage("Profil berhasil diupdate");
     } catch (err) {
-      setMessage(err.message || "Gagal update profil");
+      setMessage(err?.message || "Gagal update profil");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleSelectPhoto = (e) => {
+  // ✅ file picker (custom) + kompres
+  const handleSelectPhoto = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // convert ke base64 dataURL agar bisa disimpan di backend sebagai string
-    const reader = new FileReader();
-    reader.onload = () => {
-      setCertPhoto(String(reader.result || ""));
-    };
-    reader.readAsDataURL(file);
+    setMessage("");
+    setCertError("");
+
+    if (!file.type || !file.type.startsWith("image/")) {
+      setCertError("File sertifikat harus berupa gambar (jpg/png/webp, dll).");
+      e.target.value = "";
+      setCertPhoto("");
+      return;
+    }
+
+    // (opsional) batasi ukuran file mentah supaya tidak berat sekali
+    // misal 8MB sebelum kompres
+    const maxRawBytes = 8 * 1024 * 1024;
+    if (file.size > maxRawBytes) {
+      setCertError("Ukuran file terlalu besar. Gunakan gambar < 8MB.");
+      e.target.value = "";
+      setCertPhoto("");
+      return;
+    }
+
+    setCertPhotoMeta({ originalName: file.name, originalSize: file.size });
+
+    try {
+      // ✅ kompres ke jpeg, resize max 900x900
+      const compressedDataUrl = await compressImageToDataUrl(file, {
+        maxWidth: 900,
+        maxHeight: 900,
+        quality: 0.75,
+        mime: "image/jpeg",
+      });
+
+      setCertPhoto(compressedDataUrl);
+    } catch (err) {
+      setCertError("Gagal memproses gambar. Coba file lain.");
+      setCertPhoto("");
+    }
   };
 
   const handleAddCertificate = async () => {
-    if (!user) return;
-    setLoading(true);
-    setMessage("");
+    const uid = getLocalUserId();
+    const token = getLocalToken();
 
+    if (!uid) {
+      setMessage("User ID tidak ditemukan. Silakan logout lalu login ulang.");
+      return;
+    }
+    if (!token) {
+      setMessage("Token tidak ditemukan. Silakan logout lalu login ulang.");
+      return;
+    }
+
+    setMessage("");
+    setCertError("");
+
+    // ✅ minimal wajib
+    if (!certName.trim()) {
+      setCertError("Nama sertifikat wajib diisi.");
+      return;
+    }
+    if (!certPhoto) {
+      setCertError("Foto sertifikat wajib diupload (pilih gambar).");
+      return;
+    }
+
+    // validasi tanggal
+    if (certIssued && certExpired) {
+      const a = new Date(certIssued).getTime();
+      const b = new Date(certExpired).getTime();
+      if (!Number.isNaN(a) && !Number.isNaN(b) && b < a) {
+        setCertError("Tanggal kadaluarsa tidak boleh lebih awal dari tanggal terbit.");
+        return;
+      }
+    }
+
+    setLoading(true);
     try {
       // Filter out empty fields and validate dates
       const payload = {};
@@ -107,39 +251,40 @@ export default function Profile() {
       console.log('Certificate payload:', payload);
       const userId = user._id || user.id;
       const updated = await addUserCertificate(userId, payload);
+
       setUser(updated);
-
-      // reset form
-      setCertName("");
-      setCertProvider("");
-      setCertNumber("");
-      setCertCategory("");
-      setCertIssued("");
-      setCertExpired("");
-      setCertPhoto("");
-
-      setMessage("Sertifikat berhasil ditambahkan.");
+      resetCertificateForm();
+      setMessage("Sertifikat berhasil ditambahkan");
     } catch (err) {
-      setMessage(err.message || "Gagal menambah sertifikat");
+      // kalau masih 413, berarti limit BE terlalu kecil sekali
+      setCertError(err?.message || "Gagal menambah sertifikat");
     } finally {
       setLoading(false);
     }
   };
 
   const handleDeleteCert = async (certId) => {
-    if (!user) return;
-    const ok = window.confirm("Hapus sertifikat ini?");
-    if (!ok) return;
+    const uid = getLocalUserId();
+    const token = getLocalToken();
+
+    if (!uid) {
+      setMessage("User ID tidak ditemukan. Silakan logout lalu login ulang.");
+      return;
+    }
+    if (!token) {
+      setMessage("Token tidak ditemukan. Silakan logout lalu login ulang.");
+      return;
+    }
 
     setLoading(true);
     setMessage("");
 
     try {
-      const updated = await deleteUserCertificate(user._id || user.id, certId);
+      const updated = await deleteUserCertificate(uid, certId);
       setUser(updated);
-      setMessage("Sertifikat berhasil dihapus.");
+      setMessage("Sertifikat berhasil dihapus");
     } catch (err) {
-      setMessage(err.message || "Gagal menghapus sertifikat");
+      setMessage(err?.message || "Gagal menghapus sertifikat");
     } finally {
       setLoading(false);
     }
@@ -147,102 +292,115 @@ export default function Profile() {
 
   if (!user) {
     return (
-      <div className="max-w-3xl mx-auto px-4 py-24">
-        <h2 className="text-xl font-bold mb-2">Profil</h2>
-        {loading ? (
-          <p className="text-sm text-slate-500">Memuat...</p>
-        ) : (
-          <p className="text-sm text-slate-500">
-            Silakan login terlebih dahulu.
-          </p>
-        )}
-        {message && (
-          <div className="mt-3 text-sm text-red-600 bg-red-50 border border-red-200 px-3 py-2 rounded">
-            {message}
-          </div>
-        )}
+      <div className="max-w-3xl mx-auto px-4 py-8">
+        <p className="text-slate-500 text-sm">Memuat...</p>
       </div>
     );
   }
 
   return (
-    <div className="max-w-3xl mx-auto px-4 py-24">
-      <h2 className="text-2xl font-bold mb-6">Profil Relawan</h2>
+    <div className="max-w-3xl mx-auto px-4 py-8">
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-xl font-bold text-slate-900">Profile</h1>
+
+        {!editing ? (
+          <button
+            type="button"
+            onClick={handleEdit}
+            className="px-4 py-2 rounded-lg bg-slate-900 text-white text-sm"
+          >
+            Edit
+          </button>
+        ) : (
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={handleCancel}
+              className="px-4 py-2 rounded-lg bg-slate-100 text-slate-700 text-sm"
+              disabled={loading}
+            >
+              Batal
+            </button>
+            <button
+              type="button"
+              onClick={handleSaveProfile}
+              className="px-4 py-2 rounded-lg bg-blue-600 text-white text-sm"
+              disabled={loading}
+            >
+              Simpan
+            </button>
+          </div>
+        )}
+      </div>
 
       {message && (
-        <div className="mb-4 text-sm text-slate-700 bg-slate-50 border border-slate-200 px-3 py-2 rounded">
+        <div className="mb-4 text-sm px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 text-slate-700">
           {message}
         </div>
       )}
 
-      {/* Basic Info */}
-      <div className="bg-white border border-slate-100 shadow-sm rounded-2xl p-5 mb-6">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-sm font-semibold text-slate-800">Informasi</h3>
+      {/* INFO DASAR */}
+      <div className="border rounded-2xl p-4 mb-6">
+        <div className="flex justify-between border-b pb-3 mb-3">
+          <span className="text-xs font-medium text-slate-500">Nama</span>
           {!editing ? (
-            <button
-              onClick={() => setEditing(true)}
-              className="text-xs px-3 py-1.5 rounded-lg bg-slate-900 text-white"
-              disabled={loading}
-            >
-              Edit
-            </button>
+            <span className="text-sm font-semibold text-slate-800">
+              {user.name || "-"}
+            </span>
           ) : (
-            <div className="flex gap-2">
-              <button
-                onClick={handleSaveProfile}
-                className="text-xs px-3 py-1.5 rounded-lg bg-blue-600 text-white"
-                disabled={loading}
-              >
-                Simpan
-              </button>
-              <button
-                onClick={() => {
-                  setEditing(false);
-                  setName(user?.name || "");
-                }}
-                className="text-xs px-3 py-1.5 rounded-lg bg-slate-100 text-slate-700"
-                disabled={loading}
-              >
-                Batal
-              </button>
-            </div>
+            <input
+              className="border rounded-lg px-3 py-2 text-sm w-64"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Nama lengkap"
+            />
           )}
         </div>
 
-        <ProfileRow
-          label="Nama"
-          value={
-            editing ? (
-              <input
-                className="border rounded-lg px-3 py-2 text-sm w-full"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Nama"
-              />
-            ) : (
-              user?.name || "-"
-            )
-          }
-        />
-        <ProfileRow label="Email" value={user?.email || "-"} />
-        <ProfileRow label="Role" value={user?.role || "-"} />
+        <div className="flex justify-between">
+          <span className="text-xs font-medium text-slate-500">Email</span>
+          <span className="text-sm font-semibold text-slate-800">
+            {user.email || "-"}
+          </span>
+        </div>
       </div>
 
-      {/* Certificates */}
-      <div className="bg-white border border-slate-100 shadow-sm rounded-2xl p-5">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-sm font-semibold text-slate-800">Sertifikat</h3>
+      {/* SERTIFIKAT */}
+      <div className="border rounded-2xl p-4">
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-sm font-semibold text-slate-800">Sertifikat</h2>
           <span className="text-xs text-slate-500">
             {user?.certificates?.length || 0} item
           </span>
         </div>
 
-        {/* Add Certificate Form */}
-        <div className="border rounded-2xl p-4 bg-slate-50 mb-4">
-          <p className="text-sm font-semibold text-slate-800 mb-3">
-            Tambah Sertifikat
-          </p>
+        {/* ✅ Form tambah sertifikat hanya saat edit */}
+        {editing && (
+          <div className="border rounded-2xl p-4 bg-slate-50 mb-4">
+            <p className="text-sm font-semibold text-slate-800 mb-1">
+              Tambah Sertifikat
+            </p>
+
+            <p className="text-xs text-slate-600 mb-3">
+              <span className="font-medium">Keterangan:</span> <br />
+              - <span className="font-medium">Nama Sertifikat</span> = nama sertifikat (contoh: P3K). <br />
+              - <span className="font-medium">Tanggal Terbit</span> = tanggal sertifikat dikeluarkan. <br />
+              - <span className="font-medium">Tanggal Kadaluarsa</span> = berlaku sampai kapan (opsional). <br />
+              - <span className="font-medium">Foto Sertifikat</span> wajib gambar. Sistem akan mengompres agar tidak error 413.
+            </p>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="sm:col-span-2">
+                <label className="block text-xs text-slate-600 mb-1">
+                  Nama Sertifikat (wajib)
+                </label>
+                <input
+                  className="border rounded-lg px-3 py-2 text-sm w-full"
+                  placeholder="Contoh: P3K"
+                  value={certName}
+                  onChange={(e) => setCertName(e.target.value)}
+                />
+              </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <input
@@ -292,88 +450,173 @@ export default function Profile() {
               />
             </div>
 
-            <div className="sm:col-span-2">
-              <label className="block text-xs text-slate-600 mb-1">
-                Upload Foto Sertifikat
-              </label>
-              <input
-                type="file"
-                accept="image/*"
-                onChange={handleSelectPhoto}
-                className="text-sm"
-              />
-              {certPhoto && (
-                <img
-                  src={certPhoto}
-                  alt="preview"
-                  className="mt-2 w-48 rounded-xl border border-slate-200"
+              <div>
+                <label className="block text-xs text-slate-600 mb-1">
+                  Nomor Sertifikat (opsional)
+                </label>
+                <input
+                  className="border rounded-lg px-3 py-2 text-sm w-full"
+                  placeholder="Contoh: ID-2025-00123"
+                  value={certNumber}
+                  onChange={(e) => setCertNumber(e.target.value)}
                 />
-              )}
+              </div>
+
+              <div>
+                <label className="block text-xs text-slate-600 mb-1">
+                  Kategori (opsional)
+                </label>
+                <input
+                  className="border rounded-lg px-3 py-2 text-sm w-full"
+                  placeholder="Contoh: Kesehatan/K3/Bahasa"
+                  value={certCategory}
+                  onChange={(e) => setCertCategory(e.target.value)}
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs text-slate-600 mb-1">
+                  Tanggal Terbit (opsional)
+                </label>
+                <input
+                  type="date"
+                  className="border rounded-lg px-3 py-2 text-sm w-full"
+                  value={certIssued}
+                  onChange={(e) => setCertIssued(e.target.value)}
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs text-slate-600 mb-1">
+                  Tanggal Kadaluarsa (opsional)
+                </label>
+                <input
+                  type="date"
+                  className="border rounded-lg px-3 py-2 text-sm w-full"
+                  value={certExpired}
+                  onChange={(e) => setCertExpired(e.target.value)}
+                />
+              </div>
+
+              {/* ✅ CUSTOM FILE PICKER (beda dari default choose file) */}
+              <div className="sm:col-span-2">
+                <label className="block text-xs text-slate-600 mb-1">
+                  Upload Foto Sertifikat (wajib)
+                </label>
+
+                <div className="flex items-center gap-3">
+                  <label className="px-4 py-2 rounded-lg bg-slate-900 text-white text-xs cursor-pointer">
+                    Pilih Gambar
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleSelectPhoto}
+                      className="hidden"
+                    />
+                  </label>
+
+                  <span className="text-xs text-slate-600">
+                    {certPhoto
+                      ? `File dipilih ✅ (${certPhotoMeta.originalName || "gambar"})`
+                      : "Belum ada file"}
+                  </span>
+                </div>
+
+                {certPhotoMeta.originalSize > 0 && (
+                  <p className="mt-1 text-[11px] text-slate-500">
+                    Ukuran file asli: {(certPhotoMeta.originalSize / 1024 / 1024).toFixed(2)} MB
+                    {" · "}Gambar akan dikompres otomatis.
+                  </p>
+                )}
+
+                {/* preview */}
+                {certPhoto && (
+                  <img
+                    src={certPhoto}
+                    alt="preview sertifikat"
+                    className="mt-2 w-48 rounded-xl border border-slate-200"
+                  />
+                )}
+              </div>
             </div>
+
+            <button
+              type="button"
+              onClick={handleAddCertificate}
+              disabled={loading}
+              className="mt-3 text-xs px-4 py-2 rounded-lg bg-blue-600 text-white disabled:opacity-60"
+            >
+              Tambahkan
+            </button>
+
+            {/* ✅ error dekat tombol */}
+            {certError && (
+              <div className="mt-2 text-xs text-red-700 bg-red-50 border border-red-200 px-3 py-2 rounded-xl">
+                {certError}
+              </div>
+            )}
           </div>
+        )}
 
-          <button
-            onClick={handleAddCertificate}
-            className="mt-3 text-xs px-4 py-2 rounded-lg bg-blue-600 text-white"
-            disabled={loading || !certName}
-          >
-            Tambahkan
-          </button>
-        </div>
+        {/* List Sertifikat */}
+        {(!user.certificates || user.certificates.length === 0) && (
+          <p className="text-xs text-slate-500">Belum ada sertifikat.</p>
+        )}
 
-        {/* Certificate List */}
-        {!user?.certificates || user.certificates.length === 0 ? (
-          <p className="text-sm text-slate-500">Belum ada sertifikat.</p>
-        ) : (
-          <div className="space-y-3">
-            {user.certificates.map((c) => (
-              <div
-                key={c._id || c.id}
-                className="border rounded-2xl p-4 flex items-start justify-between gap-4"
-              >
+        <div className="space-y-3">
+          {user.certificates?.map((c) => (
+            <div
+              key={String(c._id || c.id)}
+              className="border rounded-xl p-3 bg-white"
+            >
+              <div className="flex justify-between items-start gap-3">
                 <div>
                   <p className="text-sm font-semibold text-slate-800">
                     {c.name || "-"}
                   </p>
-                  <p className="text-xs text-slate-600 mt-1">
-                    Provider: {c.provider || "-"} • No:{" "}
-                    {c.certificateNumber || "-"}
-                  </p>
-                  <p className="text-xs text-slate-600">
-                    Kategori: {c.category || "-"} • Terbit:{" "}
-                    {c.dateIssued || "-"} • Exp: {c.dateExpired || "-"}
-                  </p>
 
-                  {c.photo && (
-                    <img
-                      src={c.photo}
-                      alt="sertifikat"
-                      className="mt-2 w-48 rounded-xl border border-slate-200"
-                    />
-                  )}
+                  <div className="mt-1 text-xs text-slate-600 space-y-0.5">
+                    {c.provider && <p>Provider: {c.provider}</p>}
+                    {c.certificateNumber && <p>No: {c.certificateNumber}</p>}
+                    {c.category && <p>Kategori: {c.category}</p>}
+                    {c.dateIssued && <p>Terbit: {c.dateIssued}</p>}
+                    {c.dateExpired && <p>Kadaluarsa: {c.dateExpired}</p>}
+                  </div>
                 </div>
 
-                <button
-                  onClick={() => handleDeleteCert(c._id || c.id)}
-                  className="text-xs px-3 py-1.5 rounded-lg bg-red-600 text-white"
-                  disabled={loading}
-                >
-                  Hapus
-                </button>
+                {editing && (
+                  <button
+                    type="button"
+                    onClick={() => handleDeleteCert(c._id || c.id)}
+                    className="text-xs px-3 py-1.5 rounded-lg bg-red-600 text-white"
+                    disabled={loading}
+                  >
+                    Hapus
+                  </button>
+                )}
               </div>
-            ))}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
 
-function ProfileRow({ label, value }) {
-  return (
-    <div className="flex items-center justify-between gap-4 border-b border-slate-100 pb-2">
-      <span className="text-xs font-medium text-slate-500">{label}</span>
-      <span className="text-sm font-semibold text-slate-800">{value}</span>
+              {c.photo && (
+                <div className="mt-3">
+                  <img
+                    src={c.photo}
+                    alt="Foto sertifikat"
+                    className="w-48 rounded-xl border border-slate-200"
+                  />
+                  <a
+                    href={c.photo}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="block text-[11px] text-blue-600 underline mt-1"
+                  >
+                    Lihat ukuran penuh
+                  </a>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }

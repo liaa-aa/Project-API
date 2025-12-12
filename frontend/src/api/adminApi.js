@@ -196,6 +196,22 @@ export const adminFetchUsers = async () => {
   return data;
 };
 
+// Ambil detail user by id (untuk modal detail di AdminUsers)
+export const adminFetchUserById = async (userId) => {
+  const res = await fetch(`${API_BASE_URL}/users/${userId}`, {
+    method: "GET",
+    headers: getAuthHeaders(),
+  });
+
+  const data = await res.json().catch(() => ({}));
+
+  if (!res.ok) {
+    throw new Error(data.message || "Gagal memuat detail user");
+  }
+
+  return data;
+};
+
 // Tambah user baru (role default: relawan)
 export const adminCreateUser = async (payload) => {
   const res = await fetch(`${API_BASE_URL}/users`, {
