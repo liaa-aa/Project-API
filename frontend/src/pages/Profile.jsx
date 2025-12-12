@@ -390,93 +390,33 @@ export default function Profile() {
             </p>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div className="sm:col-span-2">
-                <label className="block text-xs text-slate-600 mb-1">
-                  Nama Sertifikat (wajib)
-                </label>
-                <input
-                  className="border rounded-lg px-3 py-2 text-sm w-full"
-                  placeholder="Contoh: P3K"
-                  value={certName}
-                  onChange={(e) => setCertName(e.target.value)}
-                />
-              </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <input
-              className="border rounded-lg px-3 py-2 text-sm"
-              placeholder="Nama sertifikat"
-              value={certName}
-              onChange={(e) => setCertName(e.target.value)}
-            />
-            <input
-              className="border rounded-lg px-3 py-2 text-sm"
-              placeholder="Provider"
-              value={certProvider}
-              onChange={(e) => setCertProvider(e.target.value)}
-            />
-            <input
-              className="border rounded-lg px-3 py-2 text-sm"
-              placeholder="Nomor sertifikat"
-              value={certNumber}
-              onChange={(e) => setCertNumber(e.target.value)}
-            />
-            <input
-              className="border rounded-lg px-3 py-2 text-sm"
-              placeholder="Kategori"
-              value={certCategory}
-              onChange={(e) => setCertCategory(e.target.value)}
-            />
-            <div>
-              <label className="block text-xs text-slate-600 mb-1">
-                Tanggal Terbit
-              </label>
               <input
-                type="date"
-                className="border rounded-lg px-3 py-2 text-sm w-full"
-                value={certIssued}
-                onChange={(e) => setCertIssued(e.target.value)}
+                className="border rounded-lg px-3 py-2 text-sm"
+                placeholder="Nama sertifikat"
+                value={certName}
+                onChange={(e) => setCertName(e.target.value)}
               />
-            </div>
-            <div>
-              <label className="block text-xs text-slate-600 mb-1">
-                Tanggal Expired
-              </label>
               <input
-                type="date"
-                className="border rounded-lg px-3 py-2 text-sm w-full"
-                value={certExpired}
-                onChange={(e) => setCertExpired(e.target.value)}
+                className="border rounded-lg px-3 py-2 text-sm"
+                placeholder="Provider"
+                value={certProvider}
+                onChange={(e) => setCertProvider(e.target.value)}
               />
-            </div>
-
+              <input
+                className="border rounded-lg px-3 py-2 text-sm"
+                placeholder="Nomor sertifikat"
+                value={certNumber}
+                onChange={(e) => setCertNumber(e.target.value)}
+              />
+              <input
+                className="border rounded-lg px-3 py-2 text-sm"
+                placeholder="Kategori"
+                value={certCategory}
+                onChange={(e) => setCertCategory(e.target.value)}
+              />
               <div>
                 <label className="block text-xs text-slate-600 mb-1">
-                  Nomor Sertifikat (opsional)
-                </label>
-                <input
-                  className="border rounded-lg px-3 py-2 text-sm w-full"
-                  placeholder="Contoh: ID-2025-00123"
-                  value={certNumber}
-                  onChange={(e) => setCertNumber(e.target.value)}
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs text-slate-600 mb-1">
-                  Kategori (opsional)
-                </label>
-                <input
-                  className="border rounded-lg px-3 py-2 text-sm w-full"
-                  placeholder="Contoh: Kesehatan/K3/Bahasa"
-                  value={certCategory}
-                  onChange={(e) => setCertCategory(e.target.value)}
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs text-slate-600 mb-1">
-                  Tanggal Terbit (opsional)
+                  Tanggal Terbit
                 </label>
                 <input
                   type="date"
@@ -485,10 +425,9 @@ export default function Profile() {
                   onChange={(e) => setCertIssued(e.target.value)}
                 />
               </div>
-
               <div>
                 <label className="block text-xs text-slate-600 mb-1">
-                  Tanggal Kadaluarsa (opsional)
+                  Tanggal Expired
                 </label>
                 <input
                   type="date"
