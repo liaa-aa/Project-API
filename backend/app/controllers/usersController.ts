@@ -1,5 +1,8 @@
 import type { HttpContext } from '@adonisjs/core/http'
 import User from '#models/users'
+import Bencana from '#models/bencana'
+import RegisRelawan from '#models/regis_relawan'
+
 
 export default class usersController {
   // GET /users
@@ -77,11 +80,6 @@ export default class usersController {
     const user = await User.findById(targetUserId)
     if (!user) {
       return response.notFound({ message: 'User not found' })
-    }
-
-    // Pastikan certificates array ada
-    if (!user.certificates) {
-      user.certificates = []
     }
 
     // Convert date strings to Date objects
@@ -166,5 +164,16 @@ export default class usersController {
     await user.save()
 
     return response.ok(user)
+  }
+  public async getAdminStats({ response }: HttpContext) {
+    const totalUsers = await User.countDocuments()
+    const totalEvents = await Bencana.countDocuments()
+    const totalVolunteers = await RegisRelawan.countDocuments({ status: 'approved' })
+
+    return response.ok({
+      totalUsers,
+      totalEvents,
+      totalVolunteers,
+    })
   }
 }

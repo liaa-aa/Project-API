@@ -36,6 +36,8 @@ router
   })
   .use(middleware.auth())
 
+router.get('/admin/stats', '#controllers/usersController.getAdminStats').use(middleware.auth()).use(middleware.admin())
+
 router
   .group(() => {
     router.post('/graphql', '#controllers/graphqlController.handle')
