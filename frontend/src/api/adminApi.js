@@ -361,6 +361,32 @@ export const fetchVolunteersByEvent = async (bencanaId) => {
 };
 
 // ===================
+// HITUNG STATUS RELAWAN PER EVENT (GraphQL only, ringan) ✅
+// ===================
+export const fetchVolunteerStatusCountsByEvent = async (bencanaId) => {
+  const query = `
+    query BencanaRelawanCounts($bencanaId: ID!) {
+      bencanaRelawan(bencanaId: $bencanaId) {
+        status
+      }
+    }
+  `;
+
+  const data = await graphqlRequest(query, { bencanaId });
+  const regs = data?.bencanaRelawan || [];
+
+  const counts = { pending: 0, approved: 0, rejected: 0 };
+  regs.forEach((r) => {
+    const s = String(r.status || "").toLowerCase();
+    if (s === "pending") counts.pending += 1;
+    else if (s === "approved") counts.approved += 1;
+    else if (s === "rejected") counts.rejected += 1;
+  });
+
+  return counts;
+};
+
+// ===================
 // UPDATE STATUS RELAWAN (GraphQL: updateRegistrationStatus) - SUDAH ADA
 // ===================
 export const updateRegistrationStatus = async (registrationId, status) => {
