@@ -48,20 +48,7 @@ const Home = () => {
                 </Link>
               </div>
 
-              <div className="mt-6 grid grid-cols-3 gap-4 max-w-md text-xs text-blue-50/90">
-                <div>
-                  <p className="font-semibold text-white">+100</p>
-                  <p>Relawan aktif</p>
-                </div>
-                <div>
-                  <p className="font-semibold text-white">+20</p>
-                  <p>Event penanggulangan</p>
-                </div>
-                <div>
-                  <p className="font-semibold text-white">24/7</p>
-                  <p>Dukungan platform</p>
-                </div>
-              </div>
+              {/* ✅ HAPUS: statistik dummy (Relawan aktif / Event penanggulangan / Dukungan platform) */}
             </div>
 
             {/* KANAN: GAMBAR */}

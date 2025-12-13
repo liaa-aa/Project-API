@@ -27,8 +27,6 @@ export const adminFetchStats = async () => {
     throw new Error(data.message || "Gagal memuat statistik admin");
   }
 
-  // Backend mengembalikan:
-  // { totalUsers, totalEvents, totalVolunteers }
   return {
     totalRelawan: Number(data.totalVolunteers ?? 0),
     totalEventBencana: Number(data.totalEvents ?? 0),
@@ -91,7 +89,6 @@ export const adminFetchEvents = async () => {
 // CRUD EVENT (GraphQL: createBencana, updateBencana, deleteBencana)
 // ===================
 
-// payload: { title, description, location, type, date, maxVolunteers }
 export const createEvent = async (payload) => {
   const query = `
     mutation CreateBencana(
@@ -220,7 +217,7 @@ export const adminFetchUsers = async () => {
   return data;
 };
 
-// Ambil detail user by id (untuk modal detail di AdminUsers)
+// Ambil detail user by id
 export const adminFetchUserById = async (userId) => {
   const res = await fetch(`${API_BASE_URL}/users/${userId}`, {
     method: "GET",
@@ -300,7 +297,7 @@ export const adminDeleteUser = async (id) => {
 };
 
 // ===================
-// DAFTAR RELAWAN PER EVENT (GraphQL + REST user) - SUDAH ADA
+// DAFTAR RELAWAN PER EVENT (GraphQL + REST user) - FIXED ✅
 // ===================
 export const fetchVolunteersByEvent = async (bencanaId) => {
   const query = `
@@ -330,11 +327,20 @@ export const fetchVolunteersByEvent = async (bencanaId) => {
   await Promise.all(
     uniqueUserIds.map(async (userId) => {
       try {
-        const res = await fetch(`${API_BASE_URL}/users/${userId}`);
-        const user = await res.json().catch(() => null);
-        if (res.ok && user) {
-          userMap[userId] = user;
+        // ✅ FIX: pakai auth headers
+        const res = await fetch(`${API_BASE_URL}/users/${userId}`, {
+          method: "GET",
+          headers: getAuthHeaders(),
+        });
+
+        // kalau 401/403, biar gampang debug
+        if (!res.ok) {
+          // jangan throw, biar user lain tetap kebaca
+          return;
         }
+
+        const user = await res.json().catch(() => null);
+        if (user) userMap[userId] = user;
       } catch {
         // abaikan
       }
@@ -343,6 +349,7 @@ export const fetchVolunteersByEvent = async (bencanaId) => {
 
   return registrations.map((reg) => {
     const user = userMap[reg.userId] || null;
+
     return {
       ...reg,
       _id: reg.id,
