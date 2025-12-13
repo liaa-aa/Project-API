@@ -12,6 +12,30 @@ const getAuthHeaders = () => {
     : { "Content-Type": "application/json" };
 };
 
+// ===================
+// ADMIN STATS (REST: /admin/stats)
+// ===================
+export const adminFetchStats = async () => {
+  const res = await fetch(`${API_BASE_URL}/admin/stats`, {
+    method: "GET",
+    headers: getAuthHeaders(),
+  });
+
+  const data = await res.json().catch(() => ({}));
+
+  if (!res.ok) {
+    throw new Error(data.message || "Gagal memuat statistik admin");
+  }
+
+  // Backend mengembalikan:
+  // { totalUsers, totalEvents, totalVolunteers }
+  return {
+    totalRelawan: Number(data.totalVolunteers ?? 0),
+    totalEventBencana: Number(data.totalEvents ?? 0),
+    totalPengguna: Number(data.totalUsers ?? 0),
+  };
+};
+
 /**
  * Helper GraphQL untuk /graphql (butuh JWT + role admin untuk resolver tertentu).
  */

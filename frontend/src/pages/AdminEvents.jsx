@@ -1,6 +1,6 @@
 // frontend/src/pages/AdminEvents.jsx
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   adminFetchEvents,
   createEvent,
@@ -15,6 +15,8 @@ export default function AdminEvents() {
   const [error, setError] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
 
+  const fileRef = useRef(null);
+
   const [form, setForm] = useState({
     id: null,
     title: "",
@@ -23,8 +25,9 @@ export default function AdminEvents() {
     type: "",
     date: "",
     maxVolunteers: "",
-    photo: "",
+    photo: "", // base64 / url
   });
+
   const [isEditing, setIsEditing] = useState(false);
 
   const loadEvents = async () => {
@@ -32,7 +35,6 @@ export default function AdminEvents() {
     setError("");
     try {
       const data = await adminFetchEvents();
-      console.log('Events loaded:', data); // Debug log
       setEvents(data || []);
     } catch (err) {
       setError(err.message || "Gagal memuat event");
@@ -59,6 +61,7 @@ export default function AdminEvents() {
     setIsEditing(false);
     setError("");
     setSuccessMsg("");
+    if (fileRef.current) fileRef.current.value = "";
   };
 
   const handleChange = (e) => {
@@ -80,6 +83,15 @@ export default function AdminEvents() {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    // optional: validasi ukuran (misal max 2MB)
+    const maxBytes = 2 * 1024 * 1024;
+    if (file.size > maxBytes) {
+      setError("Ukuran gambar terlalu besar. Maksimal 2MB.");
+      if (fileRef.current) fileRef.current.value = "";
+      return;
+    }
+
+    setError("");
     const reader = new FileReader();
     reader.onload = () => {
       setForm((prev) => ({
@@ -88,6 +100,11 @@ export default function AdminEvents() {
       }));
     };
     reader.readAsDataURL(file);
+  };
+
+  const removePhoto = () => {
+    setForm((prev) => ({ ...prev, photo: "" }));
+    if (fileRef.current) fileRef.current.value = "";
   };
 
   const handleSubmit = async (e) => {
@@ -113,7 +130,7 @@ export default function AdminEvents() {
       type: form.type,
       date: form.date,
       maxVolunteers: maxVol,
-      photo: form.photo,
+      photo: form.photo, // base64 / url
     };
 
     try {
@@ -132,19 +149,22 @@ export default function AdminEvents() {
   };
 
   const handleEditClick = (ev) => {
+    const eventId = ev._id || ev.id;
     setForm({
-      id: ev.id,
+      id: eventId,
       title: ev.title || "",
       description: ev.description || "",
       location: ev.location || "",
       type: ev.type || "",
-      date: ev.date ? ev.date.slice(0, 10) : "",
+      date: ev.date ? String(ev.date).slice(0, 10) : "",
       maxVolunteers: ev.maxVolunteers?.toString() || "",
       photo: ev.photo || "",
     });
+
     setIsEditing(true);
     setError("");
     setSuccessMsg("");
+    if (fileRef.current) fileRef.current.value = "";
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
@@ -171,6 +191,14 @@ export default function AdminEvents() {
     });
   };
 
+  const sortedEvents = useMemo(() => {
+    return [...events].sort((a, b) => {
+      const da = new Date(a.date || 0).getTime();
+      const db = new Date(b.date || 0).getTime();
+      return db - da;
+    });
+  }, [events]);
+
   return (
     <div className="p-6 bg-slate-50 min-h-screen">
       <div className="max-w-5xl mx-auto space-y-6">
@@ -185,6 +213,7 @@ export default function AdminEvents() {
           </div>
         </header>
 
+        {/* FORM */}
         <section className="border rounded-2xl p-5 bg-white shadow-sm">
           <h2 className="text-lg font-semibold mb-3">
             {isEditing ? "Edit Event" : "Buat Event Baru"}
@@ -278,22 +307,55 @@ export default function AdminEvents() {
               </div>
             </div>
 
+            {/* PHOTO - tombol tambah gambar */}
             <div>
               <label className="block text-sm font-medium mb-1">
                 Photo Bencana
               </label>
-              <input
-                type="file"
-                accept="image/*"
-                onChange={handlePhotoChange}
-                className="w-full border rounded px-3 py-2 text-sm"
-              />
+
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => fileRef.current?.click()}
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-slate-900 text-white text-xs font-semibold hover:bg-slate-800 transition"
+                >
+                  ➕ Tambah Gambar
+                </button>
+
+                <span className="text-xs text-slate-600">
+                  {form.photo ? "Gambar dipilih ✅" : "Belum ada gambar"}
+                </span>
+
+                {form.photo && (
+                  <button
+                    type="button"
+                    onClick={removePhoto}
+                    className="text-xs font-semibold text-red-600 hover:text-red-700"
+                    title="Hapus gambar"
+                  >
+                    Hapus
+                  </button>
+                )}
+
+                {/* input file hidden */}
+                <input
+                  ref={fileRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handlePhotoChange}
+                  className="hidden"
+                />
+              </div>
+
               {form.photo && (
-                <div className="mt-2">
+                <div className="mt-3">
                   <img
                     src={form.photo}
                     alt="Preview"
-                    className="w-48 h-32 object-cover rounded border"
+                    className="w-56 h-36 object-cover rounded-xl border border-slate-200"
+                    onError={(e) => {
+                      e.currentTarget.style.display = "none";
+                    }}
                   />
                 </div>
               )}
@@ -306,6 +368,7 @@ export default function AdminEvents() {
               >
                 {isEditing ? "Simpan Perubahan" : "Buat Event"}
               </button>
+
               {isEditing && (
                 <button
                   type="button"
@@ -319,75 +382,80 @@ export default function AdminEvents() {
           </form>
         </section>
 
+        {/* LIST */}
         <section>
           <h2 className="text-lg font-semibold mb-3">Daftar Event</h2>
 
           {loading ? (
             <p className="text-sm text-slate-500">Memuat data event...</p>
-          ) : events.length === 0 ? (
+          ) : sortedEvents.length === 0 ? (
             <p className="text-sm text-slate-500">
               Belum ada event. Tambahkan event baru di atas.
             </p>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {events.map((ev) => (
-                <div
-                  key={ev.id}
-                  className="bg-white border rounded-2xl shadow-sm overflow-hidden flex flex-col justify-between"
-                >
-                  {ev.photo && ev.photo.trim() !== '' && (
-                    <div className="w-full h-32 overflow-hidden">
-                      <img
-                        src={ev.photo}
-                        alt={ev.title}
-                        className="w-full h-full object-cover"
-                        onError={(e) => {
-                          console.log('Image load error for event:', ev.title, 'Photo URL:', ev.photo);
-                          e.target.style.display = 'none';
-                        }}
-                        onLoad={() => console.log('Image loaded successfully for:', ev.title)}
-                      />
-                    </div>
-                  )}
-                  <div className="p-4">
-                    <h3 className="text-base font-semibold text-slate-800">
-                      {ev.title}
-                    </h3>
-                    <p className="text-sm text-slate-500">
-                      {ev.location} • {formatDate(ev.date)}
-                    </p>
-                    <p className="text-xs text-slate-500 mt-1">
-                      Tipe: <span className="font-medium">{ev.type}</span>
-                    </p>
-                    <p className="text-xs text-slate-500 mt-1">
-                      Relawan:{" "}
-                      <span className="font-semibold">
-                        {ev.currentVolunteers || 0} / {ev.maxVolunteers || 0}
-                      </span>
-                    </p>
-                    <p className="text-sm text-slate-700 mt-2 line-clamp-2">
-                      {ev.description || "Tidak ada deskripsi."}
-                    </p>
+              {sortedEvents.map((ev) => {
+                const eventId = ev._id || ev.id;
 
-                    <div className="flex justify-end gap-2 mt-3 pt-3 border-t">
-                      <button
-                        type="button"
-                        onClick={() => handleEditClick(ev)}
-                        className="px-3 py-1 rounded bg-slate-200 text-xs hover:bg-slate-300"
-                      >
-                        Edit
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleDeleteClick(ev.id)}
-                        className="px-3 py-1 rounded bg-red-600 text-white text-xs hover:bg-red-700"
-                      >
-                        Hapus
-                      </button>
+                return (
+                  <div
+                    key={eventId}
+                    className="bg-white border rounded-2xl shadow-sm overflow-hidden flex flex-col justify-between"
+                  >
+                    {ev.photo && String(ev.photo).trim() !== "" && (
+                      <div className="w-full h-32 overflow-hidden bg-slate-100">
+                        <img
+                          src={ev.photo}
+                          alt={ev.title}
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            e.currentTarget.style.display = "none";
+                          }}
+                        />
+                      </div>
+                    )}
+
+                    <div className="p-4">
+                      <h3 className="text-base font-semibold text-slate-800">
+                        {ev.title}
+                      </h3>
+                      <p className="text-sm text-slate-500">
+                        {ev.location} • {formatDate(ev.date)}
+                      </p>
+                      <p className="text-xs text-slate-500 mt-1">
+                        Tipe: <span className="font-medium">{ev.type}</span>
+                      </p>
+                      <p className="text-xs text-slate-500 mt-1">
+                        Relawan:{" "}
+                        <span className="font-semibold">
+                          {ev.currentVolunteers || 0} / {ev.maxVolunteers || 0}
+                        </span>
+                      </p>
+
+                      <p className="text-sm text-slate-700 mt-2 line-clamp-2">
+                        {ev.description || "Tidak ada deskripsi."}
+                      </p>
+
+                      <div className="flex justify-end gap-2 mt-3 pt-3 border-t">
+                        <button
+                          type="button"
+                          onClick={() => handleEditClick(ev)}
+                          className="px-3 py-1 rounded bg-slate-200 text-xs hover:bg-slate-300"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteClick(eventId)}
+                          className="px-3 py-1 rounded bg-red-600 text-white text-xs hover:bg-red-700"
+                        >
+                          Hapus
+                        </button>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </section>
