@@ -1,14 +1,30 @@
 openapi: 3.0.0
 info:
-  title: API VolenteerEvent - Sistem Relawan Bencana
+  title: VolunteerEvent API - Sistem Manajemen Relawan Bencana
   version: 1.0.0
   description: |
-    Dokumentasi REST API untuk aplikasi VolenteerEvent (sistem relawan bencana).
-    Disusun menggunakan OpenAPI 3.0 (Swagger).
+    **API Dokumentasi Lengkap untuk VolunteerEvent**
+    
+    Sistem manajemen relawan bencana yang menyediakan:
+    - Autentikasi JWT & Google OAuth
+    - Manajemen pengguna dan sertifikat
+    - CRUD event/bencana dengan GraphQL
+    - Dashboard statistik admin
+    - Integrasi cuaca OpenWeatherMap
+    
+    **Tech Stack:** AdonisJS v6, MongoDB, GraphQL, JWT
+  contact:
+    name: Tim Developer VolunteerEvent
+    email: dev@volunteerevent.com
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
 
 servers:
   - url: http://localhost:3333
-    description: Server lokal pengembangan
+    description: Development Server
+  - url: https://api.volunteerevent.com
+    description: Production Server
 
 paths:
   /register:
@@ -295,15 +311,242 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
+  /admin/stats:
+    get:
+      tags:
+        - Admin Dashboard
+      summary: Statistik Dashboard Admin
+      description: >
+        Mengambil statistik lengkap untuk dashboard admin:
+        - Total pengguna terdaftar
+        - Total event/bencana aktif
+        - Total relawan yang disetujui
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Statistik berhasil diambil
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminStatsResponse'
+        '401':
+          description: Tidak terautentikasi
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Akses ditolak (bukan admin)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /users/{id}/certificates:
+    post:
+      tags:
+        - Certificates
+      summary: Tambah Sertifikat User
+      description: >
+        Menambahkan sertifikat baru ke profil user.
+        User hanya bisa menambah sertifikat sendiri, admin bisa menambah ke user manapun.
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+          description: ID user (MongoDB ObjectId)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CertificateRequest'
+      responses:
+        '200':
+          description: Sertifikat berhasil ditambahkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          description: Data tidak valid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Tidak terautentikasi
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Tidak diizinkan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: User tidak ditemukan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /users/{id}/certificates/{certId}:
+    put:
+      tags:
+        - Certificates
+      summary: Update Sertifikat
+      description: Mengubah data sertifikat yang sudah ada
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+          description: ID user
+        - in: path
+          name: certId
+          required: true
+          schema:
+            type: string
+          description: ID sertifikat
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CertificateRequest'
+      responses:
+        '200':
+          description: Sertifikat berhasil diupdate
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '401':
+          description: Tidak terautentikasi
+        '403':
+          description: Tidak diizinkan
+        '404':
+          description: User/sertifikat tidak ditemukan
+
+    delete:
+      tags:
+        - Certificates
+      summary: Hapus Sertifikat
+      description: Menghapus sertifikat dari profil user
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+          description: ID user
+        - in: path
+          name: certId
+          required: true
+          schema:
+            type: string
+          description: ID sertifikat
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Sertifikat berhasil dihapus
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '401':
+          description: Tidak terautentikasi
+        '403':
+          description: Tidak diizinkan
+        '404':
+          description: User/sertifikat tidak ditemukan
+
+  /weather:
+    get:
+      tags:
+        - Weather
+      summary: Cuaca Berdasarkan Kota
+      description: Mengambil informasi cuaca dari OpenWeatherMap API berdasarkan nama kota
+      parameters:
+        - in: query
+          name: city
+          required: true
+          schema:
+            type: string
+          description: Nama kota
+          example: Jakarta
+      responses:
+        '200':
+          description: Data cuaca berhasil diambil
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WeatherResponse'
+        '400':
+          description: Parameter city tidak valid
+        '404':
+          description: Kota tidak ditemukan
+        '500':
+          description: Error dari weather API
+
+  /weather/bencana/{id}:
+    get:
+      tags:
+        - Weather
+      summary: Cuaca Lokasi Bencana
+      description: Mengambil cuaca berdasarkan lokasi event bencana
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+          description: ID event bencana
+      responses:
+        '200':
+          description: Data cuaca lokasi bencana
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WeatherBencanaResponse'
+        '404':
+          description: Event bencana tidak ditemukan
+        '500':
+          description: Error dari weather API
+
   /graphql:
     post:
       tags:
         - GraphQL
-      summary: Endpoint GraphQL (bencana & relawan)
+      summary: GraphQL Endpoint (Events & Volunteers)
       description: >
-        Endpoint tunggal untuk seluruh operasi GraphQL:
-        query dan mutation terkait Bencana dan Relawan.
-        Endpoint ini dilindungi middleware auth (butuh JWT).
+        **Endpoint GraphQL untuk operasi Bencana & Relawan**
+        
+        **Available Queries:**
+        - `getBencana` - Daftar semua event bencana
+        - `getBencanaById(id)` - Detail event berdasarkan ID
+        - `myRegistrations` - Pendaftaran relawan user saat ini
+        - `bencanaRelawan(bencanaId)` - Daftar relawan per event (admin)
+        
+        **Available Mutations:**
+        - `createBencana` - Buat event baru (admin)
+        - `updateBencana` - Update event (admin)
+        - `deleteBencana` - Hapus event (admin)
+        - `joinBencana` - Daftar sebagai relawan
+        - `cancelJoinBencana` - Batalkan pendaftaran
+        - `updateRegistrationStatus` - Update status relawan (admin)
       security:
         - bearerAuth: []
       requestBody:
@@ -315,7 +558,7 @@ paths:
               properties:
                 query:
                   type: string
-                  description: String query GraphQL
+                  description: GraphQL query string
                   example: |
                     query {
                       getBencana {
@@ -326,6 +569,7 @@ paths:
                         date
                         maxVolunteers
                         currentVolunteers
+                        photo
                       }
                     }
                 variables:
@@ -338,7 +582,7 @@ paths:
                   example: getBencana
       responses:
         '200':
-          description: Hasil eksekusi GraphQL
+          description: GraphQL response
           content:
             application/json:
               schema:
@@ -346,12 +590,23 @@ paths:
                 properties:
                   data:
                     type: object
-                    description: Data yang dikembalikan oleh GraphQL
+                    description: Data hasil query GraphQL
                   errors:
                     type: array
                     nullable: true
                     items:
                       type: object
+                      properties:
+                        message:
+                          type: string
+                        locations:
+                          type: array
+                          items:
+                            type: object
+                        path:
+                          type: array
+                          items:
+                            type: string
         '401':
           description: Tidak terautentikasi
           content:
@@ -369,28 +624,44 @@ components:
   schemas:
     User:
       type: object
-      description: Representasi user dari database
+      description: Representasi user lengkap dari database
       properties:
         _id:
           type: string
+          description: MongoDB ObjectId
           example: 6650d9c3f8a0c71234567890
         name:
           type: string
-          example: Budi
+          description: Nama lengkap user
+          example: Budi Santoso
         email:
           type: string
           format: email
+          description: Email user (unique)
           example: budi@mail.com
         role:
           type: string
-          example: admin
+          enum: [admin, relawan]
+          description: Role user dalam sistem
+          example: relawan
+        googleId:
+          type: string
+          description: Google OAuth ID (jika login via Google)
+          example: 1234567890123456789
+        certificates:
+          type: array
+          description: Daftar sertifikat user
+          items:
+            $ref: '#/components/schemas/Certificate'
         createdAt:
           type: string
           format: date-time
+          description: Waktu pembuatan akun
           example: 2024-06-01T12:00:00Z
         updatedAt:
           type: string
           format: date-time
+          description: Waktu update terakhir
           example: 2024-06-02T08:30:00Z
 
     PublicUser:
@@ -512,9 +783,165 @@ components:
           format: password
           example: newpassword123
 
+    AdminStatsResponse:
+      type: object
+      description: Response statistik dashboard admin
+      properties:
+        totalUsers:
+          type: integer
+          description: Total pengguna terdaftar
+          example: 150
+        totalEvents:
+          type: integer
+          description: Total event/bencana
+          example: 25
+        totalVolunteers:
+          type: integer
+          description: Total relawan yang disetujui
+          example: 89
+
+    Certificate:
+      type: object
+      description: Sertifikat user
+      properties:
+        _id:
+          type: string
+          example: 6650d9c3f8a0c71234567891
+        name:
+          type: string
+          description: Nama sertifikat
+          example: Sertifikat P3K
+        provider:
+          type: string
+          description: Penyedia sertifikat
+          example: BNSP
+        dateIssued:
+          type: string
+          format: date
+          description: Tanggal terbit
+          example: 2024-01-15
+        dateExpired:
+          type: string
+          format: date
+          description: Tanggal kadaluarsa
+          example: 2026-01-15
+        certificateNumber:
+          type: string
+          description: Nomor sertifikat
+          example: P3K-2024-001
+        category:
+          type: string
+          description: Kategori sertifikat
+          example: Kesehatan
+        photo:
+          type: string
+          description: Base64 encoded image atau URL
+          example: data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQ...
+
+    CertificateRequest:
+      type: object
+      description: Request untuk menambah/update sertifikat
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          description: Nama sertifikat (wajib)
+          example: Sertifikat P3K
+        provider:
+          type: string
+          description: Penyedia sertifikat
+          example: BNSP
+        dateIssued:
+          type: string
+          format: date
+          description: Tanggal terbit (YYYY-MM-DD)
+          example: 2024-01-15
+        dateExpired:
+          type: string
+          format: date
+          description: Tanggal kadaluarsa (YYYY-MM-DD)
+          example: 2026-01-15
+        certificateNumber:
+          type: string
+          description: Nomor sertifikat
+          example: P3K-2024-001
+        category:
+          type: string
+          description: Kategori sertifikat
+          example: Kesehatan
+        photo:
+          type: string
+          description: Base64 encoded image
+          example: data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQ...
+
+    WeatherResponse:
+      type: object
+      description: Response cuaca dari OpenWeatherMap
+      properties:
+        city:
+          type: string
+          example: Jakarta
+        country:
+          type: string
+          example: ID
+        temp:
+          type: number
+          description: Suhu dalam Celsius
+          example: 28.5
+        feelsLike:
+          type: number
+          description: Suhu yang dirasakan
+          example: 32.1
+        humidity:
+          type: integer
+          description: Kelembapan (%)
+          example: 75
+        description:
+          type: string
+          description: Deskripsi cuaca
+          example: scattered clouds
+        icon:
+          type: string
+          description: Icon code cuaca
+          example: 03d
+        windSpeed:
+          type: number
+          description: Kecepatan angin (m/s)
+          example: 3.2
+
+    WeatherBencanaResponse:
+      type: object
+      description: Response cuaca untuk lokasi bencana
+      properties:
+        bencana:
+          type: object
+          properties:
+            id:
+              type: string
+              example: 6650d9c3f8a0c71234567892
+            title:
+              type: string
+              example: Banjir Jakarta Selatan
+            location:
+              type: string
+              example: Jakarta
+        weather:
+          $ref: '#/components/schemas/WeatherResponse'
+
     ErrorResponse:
       type: object
+      description: Response error standar
       properties:
         message:
           type: string
+          description: Pesan error
           example: Terjadi kesalahan server
+        code:
+          type: string
+          description: Kode error (opsional)
+          example: INTERNAL_ERROR
+        details:
+          type: object
+          description: Detail tambahan error (opsional)
+          example: {}
